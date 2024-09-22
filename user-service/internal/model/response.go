@@ -5,3 +5,7 @@ type ResponseHttp struct {
 	Message string      `json:"message"`
 	Data    interface{} `json:"data"`
 }
+
+type LoginData struct {
+	Token string `json:"token"`
+}

@@ -25,8 +25,9 @@ func router(userHandler *handler.UserHandler) {
 		json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 	}).Methods("GET")
 
-	router.HandleFunc("/register", userHandler.CreateNewUser).Methods("POST")
-	router.HandleFunc("/login", userHandler.LoginHandler).Methods("POST")
+	router.HandleFunc("/register", userHandler.UserCreate).Methods("POST")
+	router.HandleFunc("/login", userHandler.UserLogin).Methods("POST")
+	router.Handle("/aboutme", userHandler.AuthMiddleware(http.HandlerFunc(userHandler.UserGet))).Methods("GET")
 	router.HandleFunc("/protected", userHandler.ProtectedHandler).Methods("GET")
 	// router.Use(midleware.AuthMiddleware)
 	// router.Use(midleware.AuthMiddleware)
@@ -54,7 +55,6 @@ func main() {
 	}
 
 	defer db.Close()
-	fmt.Println("DB = ", db)
 
 	fmt.Println("Init Repository...")
 	repo := repository.NewuserRepository(db, ctx)

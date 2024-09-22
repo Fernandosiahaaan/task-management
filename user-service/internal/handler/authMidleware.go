@@ -1,4 +1,4 @@
-package midleware
+package handler
 
 import (
 	"context"
@@ -6,12 +6,11 @@ import (
 	"net/http"
 	"strings"
 	"task-management/user-service/internal/model"
-	"task-management/user-service/service"
 
 	"github.com/dgrijalva/jwt-go"
 )
 
-func AuthMiddleware(next http.Handler) http.Handler {
+func (s *UserHandler) AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
@@ -34,7 +33,7 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			})
 			return
 		}
-		token, err := service.VerifyToken(bearerToken[1])
+		token, err := s.Service.VerifyToken(bearerToken[1])
 		if err != nil {
 			w.WriteHeader(http.StatusUnauthorized)
 			json.NewEncoder(w).Encode(model.ResponseHttp{

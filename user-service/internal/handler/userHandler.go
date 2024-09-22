@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"task-management/user-service/internal/model"
 	"task-management/user-service/internal/service"
+
+	"github.com/dgrijalva/jwt-go"
 )
 
 type UserHandler struct {
@@ -16,12 +18,14 @@ func NewUserHandler(service *service.UserService) *UserHandler {
 	return &UserHandler{Service: service}
 }
 
-func (s *UserHandler) CreateNewUser(w http.ResponseWriter, r *http.Request) {
+func (s *UserHandler) UserCreate(w http.ResponseWriter, r *http.Request) {
 	var user model.User
+	var statusCode int
 	w.Header().Set("Content-Type", "application/json")
 
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
-		w.WriteHeader(http.StatusBadRequest)
+		statusCode = http.StatusBadRequest
+		w.WriteHeader(statusCode)
 		json.NewEncoder(w).Encode(model.ResponseHttp{
 			Error:   true,
 			Message: "failed parse body request",
@@ -31,6 +35,7 @@ func (s *UserHandler) CreateNewUser(w http.ResponseWriter, r *http.Request) {
 
 	userId, err := s.Service.CreateNewUser(user)
 	if err != nil {
+		statusCode = http.StatusBadRequest
 		w.WriteHeader(http.StatusBadRequest)
 		json.NewEncoder(w).Encode(model.ResponseHttp{
 			Error:   true,
@@ -41,36 +46,77 @@ func (s *UserHandler) CreateNewUser(w http.ResponseWriter, r *http.Request) {
 
 	user.Id = userId
 
-	w.WriteHeader(http.StatusCreated)
+	statusCode = http.StatusCreated
+	w.WriteHeader(statusCode)
 	json.NewEncoder(w).Encode(model.ResponseHttp{
 		Message: "Product created",
 		Data:    user,
 	})
 }
 
-func (s *UserHandler) LoginHandler(w http.ResponseWriter, r *http.Request) {
+func (s *UserHandler) UserLogin(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	// fmt.Printf("The request body is %v\n", r.Body)
 
 	var user model.User
+	var statusCode int
 	json.NewDecoder(r.Body).Decode(&user)
-	fmt.Println("[LoginHandler] The user request body = ", user)
 
 	user, err := s.Service.GetUser(user)
 	if err == nil {
-		tokenString, err := s.Service.CreateToken(user.Username)
+		tokenString, err := s.Service.CreateToken(user.Username, user.Password)
 		if err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
+			statusCode = http.StatusInternalServerError
+			w.WriteHeader(statusCode)
 			fmt.Errorf("No username found")
 		}
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprint(w, tokenString)
+
+		// else condition
+		statusCode = http.StatusOK
+		w.WriteHeader(statusCode)
+		dataResponse := model.LoginData{Token: tokenString}
+		json.NewEncoder(w).Encode(model.ResponseHttp{
+			Message: "Success login",
+			Error:   false,
+			Data:    dataResponse,
+		})
 		return
 	}
-	w.WriteHeader(http.StatusUnauthorized)
+
+	statusCode = http.StatusUnauthorized
+	w.WriteHeader(statusCode)
 	json.NewEncoder(w).Encode(model.ResponseHttp{
-		Message: "Invalid credentials",
+		Message: "Invalid login",
 		Error:   true,
+	})
+}
+
+func (s *UserHandler) UserGet(w http.ResponseWriter, r *http.Request) {
+	userClaims := r.Context().Value("user").(jwt.MapClaims)
+	userName, ok := userClaims["username"].(string)
+	userPass, ok2 := userClaims["password"].(string)
+	if !ok || !ok2 {
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(model.ResponseHttp{
+			Message: "Invalid token",
+			Error:   true,
+		})
+		return
+	}
+
+	user := model.User{Username: userName, Password: userPass}
+	user, err := s.Service.GetUser(user)
+	if err != nil {
+		w.WriteHeader(http.StatusBadRequest)
+		json.NewEncoder(w).Encode(model.ResponseHttp{
+			Message: "Invalid username and password",
+			Error:   true,
+		})
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(model.ResponseHttp{
+		Message: "success get info me",
+		Data:    user,
 	})
 }
 
