@@ -11,6 +11,7 @@ import (
 	"os/signal"
 	"syscall"
 	"task-management/user-service/internal/handler"
+	"task-management/user-service/internal/reddis"
 	"task-management/user-service/internal/repository"
 	"task-management/user-service/internal/service"
 
@@ -27,6 +28,7 @@ func router(userHandler *handler.UserHandler) {
 
 	router.HandleFunc("/register", userHandler.UserCreate).Methods("POST")
 	router.HandleFunc("/login", userHandler.UserLogin).Methods("POST")
+	router.HandleFunc("/logout", userHandler.UserLogout).Methods("POST")
 	router.Handle("/aboutme", userHandler.AuthMiddleware(http.HandlerFunc(userHandler.UserGet))).Methods("GET")
 	router.HandleFunc("/protected", userHandler.ProtectedHandler).Methods("GET")
 	// router.Use(midleware.AuthMiddleware)
@@ -53,8 +55,13 @@ func main() {
 	if err != nil {
 		log.Fatalf("Could not connect to the database: %v", err)
 	}
-
 	defer db.Close()
+
+	reddis.RedisClient, err = reddis.NewReddisClient(ctx)
+	if err != nil {
+		log.Fatalf("Could not to redis server. err = %v", err)
+	}
+	defer reddis.RedisClient.Close()
 
 	fmt.Println("Init Repository...")
 	repo := repository.NewuserRepository(db, ctx)
@@ -63,7 +70,7 @@ func main() {
 	userService := service.NewUserService(repo)
 
 	fmt.Println("Init Handler...")
-	userHandler := handler.NewUserHandler(userService)
+	userHandler := handler.NewUserHandler(userService, ctx)
 
 	router(userHandler)
 

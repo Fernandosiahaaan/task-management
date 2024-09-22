@@ -2,6 +2,10 @@ package model
 
 import "time"
 
+var (
+	UserSessionTime = 1 * time.Hour
+)
+
 type User struct {
 	Id        int64     `json:"id"`
 	Username  string    `json:"username"`

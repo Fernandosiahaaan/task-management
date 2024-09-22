@@ -1,10 +1,13 @@
 package handler
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"task-management/user-service/internal/model"
+	"task-management/user-service/internal/reddis"
 	"task-management/user-service/internal/service"
 
 	"github.com/dgrijalva/jwt-go"
@@ -12,10 +15,11 @@ import (
 
 type UserHandler struct {
 	Service *service.UserService
+	Ctx     context.Context
 }
 
-func NewUserHandler(service *service.UserService) *UserHandler {
-	return &UserHandler{Service: service}
+func NewUserHandler(service *service.UserService, ctx context.Context) *UserHandler {
+	return &UserHandler{Service: service, Ctx: ctx}
 }
 
 func (s *UserHandler) UserCreate(w http.ResponseWriter, r *http.Request) {
@@ -70,7 +74,19 @@ func (s *UserHandler) UserLogin(w http.ResponseWriter, r *http.Request) {
 			fmt.Errorf("No username found")
 		}
 
-		// else condition
+		// send session login to reddis data
+		ctx := context.Background()
+		err = reddis.RedisClient.Set(ctx, tokenString, user.Username, model.UserSessionTime).Err() // Set waktu kadaluarsa 30 menit
+		if err != nil {
+			fmt.Println("error saving login in redis. err = ", err)
+			w.WriteHeader(http.StatusInternalServerError)
+			json.NewEncoder(w).Encode(model.ResponseHttp{
+				Message: "error saving token",
+				Error:   true,
+			})
+			return
+		}
+
 		statusCode = http.StatusOK
 		w.WriteHeader(statusCode)
 		dataResponse := model.LoginData{Token: tokenString}
@@ -87,6 +103,57 @@ func (s *UserHandler) UserLogin(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(model.ResponseHttp{
 		Message: "Invalid login",
 		Error:   true,
+	})
+}
+
+func (s *UserHandler) UserLogout(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	authToken := r.Header.Get("Authorization")
+	if authToken == "" {
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(model.ResponseHttp{
+			Error:   true,
+			Message: "Authentication header null",
+		})
+		return
+	}
+
+	bearerToken := strings.Split(authToken, " ")
+	if len(bearerToken) != 2 {
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(model.ResponseHttp{
+			Error:   true,
+			Message: "Invalid format token",
+		})
+		return
+	}
+
+	_, err := s.Service.VerifyToken(bearerToken[1])
+	if err != nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		json.NewEncoder(w).Encode(model.ResponseHttp{
+			Error:   true,
+			Message: "Failed token",
+		})
+		return
+	}
+
+	ctx, cancel := context.WithCancel(s.Ctx)
+	defer cancel()
+	err = reddis.RedisClient.Del(ctx, bearerToken[1]).Err()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		json.NewEncoder(w).Encode(model.ResponseHttp{
+			Error:   true,
+			Message: "Failed logout session",
+		})
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(model.ResponseHttp{
+		Error:   false,
+		Message: "Success logout session",
 	})
 }
 

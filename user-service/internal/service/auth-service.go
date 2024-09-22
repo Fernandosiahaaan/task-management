@@ -2,6 +2,7 @@ package service
 
 import (
 	"fmt"
+	"task-management/user-service/internal/model"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
@@ -16,7 +17,7 @@ func (s *UserService) CreateToken(username string, password string) (string, err
 		jwt.MapClaims{
 			"username": username,
 			"password": username,
-			"exp":      time.Now().Add(time.Hour * 24).Unix(),
+			"exp":      time.Now().Add(model.UserSessionTime).Unix(),
 		})
 	tokenString, err := token.SignedString(secretKey)
 	if err != nil {
