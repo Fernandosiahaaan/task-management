@@ -11,8 +11,8 @@ import (
 	"os/signal"
 	"syscall"
 	"task-management/user-service/internal/handler"
-	"task-management/user-service/repository"
-	"task-management/user-service/service"
+	"task-management/user-service/internal/repository"
+	"task-management/user-service/internal/service"
 
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
@@ -28,6 +28,7 @@ func router(userHandler *handler.UserHandler) {
 	router.HandleFunc("/register", userHandler.CreateNewUser).Methods("POST")
 	router.HandleFunc("/login", userHandler.LoginHandler).Methods("POST")
 	router.HandleFunc("/protected", userHandler.ProtectedHandler).Methods("GET")
+	// router.Use(midleware.AuthMiddleware)
 	// router.Use(midleware.AuthMiddleware)
 
 	fmt.Println("Starting the server")

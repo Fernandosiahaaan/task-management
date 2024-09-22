@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"task-management/user-service/internal/model"
-	"task-management/user-service/repository"
+	"task-management/user-service/internal/repository"
 	"time"
 
 	"github.com/dgrijalva/jwt-go"

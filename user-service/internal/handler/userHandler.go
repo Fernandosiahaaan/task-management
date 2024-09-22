@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"task-management/user-service/internal/model"
-	"task-management/user-service/service"
+	"task-management/user-service/internal/service"
 )
 
 type UserHandler struct {
