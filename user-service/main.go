@@ -30,11 +30,10 @@ func router(userHandler *handler.UserHandler) {
 	router.HandleFunc("/login", userHandler.UserLogin).Methods("POST")
 	router.HandleFunc("/logout", userHandler.UserLogout).Methods("POST")
 	router.Handle("/aboutme", userHandler.AuthMiddleware(http.HandlerFunc(userHandler.UserGet))).Methods("GET")
+	router.Handle("/update", userHandler.AuthMiddleware(http.HandlerFunc(userHandler.UserUpdate))).Methods("PUT")
 	router.HandleFunc("/protected", userHandler.ProtectedHandler).Methods("GET")
-	// router.Use(midleware.AuthMiddleware)
-	// router.Use(midleware.AuthMiddleware)
 
-	fmt.Println("Starting the server")
+	fmt.Println("🌐 Starting the server")
 	err := http.ListenAndServe("localhost:4000", router)
 	if err != nil {
 		fmt.Println("Could not start the server", err)
@@ -63,13 +62,13 @@ func main() {
 	}
 	defer reddis.RedisClient.Close()
 
-	fmt.Println("Init Repository...")
+	fmt.Println("🔥 Init Repository...")
 	repo := repository.NewuserRepository(db, ctx)
 
-	fmt.Println("Init Repository...")
+	fmt.Println("🔥 Init Service...")
 	userService := service.NewUserService(repo)
 
-	fmt.Println("Init Handler...")
+	fmt.Println("🔥 Init Handler...")
 	userHandler := handler.NewUserHandler(userService, ctx)
 
 	router(userHandler)

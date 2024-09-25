@@ -15,19 +15,35 @@ func NewuserRepository(db *sql.DB, ctx context.Context) *UserRepository {
 	return &UserRepository{DB: db, Ctx: ctx}
 }
 
-func (r *UserRepository) CreateNewUser(user model.User) (int64, error) {
-	var id int64
+func (r *UserRepository) CreateNewUser(user model.User) (string, error) {
+	var id string
 	query := `
-	INSERT INTO users (username, password_hash, email, created_at, updated_at)
-	VALUES ($1, $2, $3, $4, $5) RETURNING id 
+	INSERT INTO users (id, username, password, email, role, created_at, updated_at)
+	VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING id 
 	`
-	err := r.DB.QueryRowContext(r.Ctx, query, user.Username, user.Password, user.Email, user.CreatedAt, user.UpdatedAt).Scan(&id)
+	err := r.DB.QueryRowContext(r.Ctx, query, user.Id, user.Username, user.Password, user.Email, user.Role, user.CreatedAt, user.UpdatedAt).Scan(&id)
 	return id, err
+}
+
+func (r *UserRepository) UpdateUser(user model.User) (string, error) {
+	var id string
+	query := `
+        UPDATE users 
+        SET username = $1, password = $2, email = $3, role = $4, updated_at = $5
+        WHERE id = $6
+        RETURNING id
+    `
+	err := r.DB.QueryRowContext(r.Ctx, query, user.Username, user.Password, user.Email, user.Role, user.UpdatedAt, user.Id).Scan(&id)
+
+	if err != nil {
+		return "", err
+	}
+	return id, nil
 }
 
 func (r *UserRepository) GetUser(user model.User) (model.User, error) {
 	query := `
-	SELECT id, username, password_hash, email FROM users 
+	SELECT id, username, password, email, role FROM users 
 	WHERE username=$1
 	`
 	var existUser model.User
@@ -36,6 +52,7 @@ func (r *UserRepository) GetUser(user model.User) (model.User, error) {
 		&existUser.Username,
 		&existUser.Password,
 		&existUser.Email,
+		&existUser.Role,
 	)
 	if err != nil {
 		return existUser, err

@@ -16,7 +16,7 @@ func (s *UserService) CreateToken(username string, password string) (string, err
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256,
 		jwt.MapClaims{
 			"username": username,
-			"password": username,
+			"password": password,
 			"exp":      time.Now().Add(model.UserSessionTime).Unix(),
 		})
 	tokenString, err := token.SignedString(secretKey)
