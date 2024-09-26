@@ -19,3 +19,8 @@ type User struct {
 type CreateUserResponse struct {
 	ID int64 `json:"id"`
 }
+
+type LoginCacheData struct {
+	Id       string `json:"id"`
+	Username string `json:"username"`
+}

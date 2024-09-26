@@ -66,12 +66,16 @@ func (s *UserHandler) UserLogin(w http.ResponseWriter, r *http.Request) {
 			s.responseHttp(w, http.StatusInternalServerError, model.ResponseHttp{Error: true, Message: "failed created token"})
 		}
 
-		// send session login to reddis data
+		// send login info and user info to redis
 		ctx := context.Background()
-		err = reddis.RedisClient.Set(ctx, tokenString, user.Username, model.UserSessionTime).Err() // Set waktu kadaluarsa 30 menit
+		err = reddis.SetLoginInfoToRedis(ctx, tokenString, model.LoginCacheData{Id: user.Id, Username: user.Username})
 		if err != nil {
-			s.responseHttp(w, http.StatusInternalServerError, model.ResponseHttp{Error: true, Message: "error saving token"})
-			return
+			s.responseHttp(w, http.StatusInternalServerError, model.ResponseHttp{Error: true, Message: err.Error()})
+		}
+
+		err = reddis.SetUserInfoToRedis(ctx, user)
+		if err != nil {
+			s.responseHttp(w, http.StatusInternalServerError, model.ResponseHttp{Error: true, Message: err.Error()})
 		}
 
 		dataResponse := model.LoginData{Token: tokenString}
@@ -115,57 +119,85 @@ func (s *UserHandler) UserLogout(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *UserHandler) UserGet(w http.ResponseWriter, r *http.Request) {
+	// receive value form context midleware
+	tokenStr := r.Context().Value("jwtToken").(string)
 	userClaims := r.Context().Value("user").(jwt.MapClaims)
-	userName, ok := userClaims["username"].(string)
-	userPass, ok2 := userClaims["password"].(string)
-	if !ok || !ok2 {
-		s.responseHttp(w, http.StatusUnauthorized, model.ResponseHttp{Error: true, Message: "Invalid token"})
+
+	// get login info from redis
+	loginInfo, err := reddis.GetLoginInfoFromRedis(r.Context(), tokenStr)
+	if err != nil {
+		s.responseHttp(w, http.StatusBadRequest, model.ResponseHttp{Error: true, Message: err.Error()})
 		return
 	}
 
-	user := model.User{Username: userName, Password: userPass}
-	user, err := s.Service.GetUser(user)
+	// get user info from db
+	user, err := reddis.GetUserInfoFromRedis(r.Context(), loginInfo.Id)
 	if err != nil {
-		s.responseHttp(w, http.StatusBadRequest, model.ResponseHttp{Error: true, Message: "Invalid username and password"})
-		return
+		// get user from db
+		userName, ok := userClaims["username"].(string)
+		userPass, ok2 := userClaims["password"].(string)
+		if !ok || !ok2 {
+			s.responseHttp(w, http.StatusUnauthorized, model.ResponseHttp{Error: true, Message: "Invalid jwt token"})
+			return
+		}
+		user = model.User{Username: userName, Password: userPass}
+		user, err = s.Service.GetUser(user)
+		if err != nil {
+			s.responseHttp(w, http.StatusBadRequest, model.ResponseHttp{Error: true, Message: "Invalid username and password"})
+			return
+		}
 	}
 
 	s.responseHttp(w, http.StatusOK, model.ResponseHttp{Error: false, Message: "success get info me", Data: user})
 }
 
 func (s *UserHandler) UserUpdate(w http.ResponseWriter, r *http.Request) {
+	var userRequest model.User
+
+	// receive value form context midleware
+	tokenStr := r.Context().Value("jwtToken").(string)
 	userClaims := r.Context().Value("user").(jwt.MapClaims)
-	userName, ok := userClaims["username"].(string)
-	userPass, ok2 := userClaims["password"].(string)
 
-	// Validasi token
-	if !ok || !ok2 {
-		s.responseHttp(w, http.StatusUnauthorized, model.ResponseHttp{Error: true, Message: "Invalid token"})
-		return
-	}
-
-	fmt.Printf("jwt username = %s; password = %s\n", userName, userPass)
-
-	user := model.User{Username: userName, Password: userPass}
-	user, err := s.Service.GetUser(user)
+	// get login info from redis
+	loginInfo, err := reddis.GetLoginInfoFromRedis(r.Context(), tokenStr)
 	if err != nil {
-		s.responseHttp(w, http.StatusBadRequest, model.ResponseHttp{Error: true, Message: "Invalid username or password"})
+		s.responseHttp(w, http.StatusBadRequest, model.ResponseHttp{Error: true, Message: err.Error()})
 		return
 	}
 
-	var userNew model.User
-	userNew.Id = user.Id
-
+	// get user info from db
+	user, err := reddis.GetUserInfoFromRedis(r.Context(), loginInfo.Id)
+	if err != nil {
+		// Validasi token
+		userName, ok := userClaims["username"].(string)
+		userPass, ok2 := userClaims["password"].(string)
+		if !ok || !ok2 {
+			s.responseHttp(w, http.StatusUnauthorized, model.ResponseHttp{Error: true, Message: "Invalid token"})
+			return
+		}
+		user := model.User{Username: userName, Password: userPass}
+		user, err = s.Service.GetUser(user)
+		if err != nil {
+			s.responseHttp(w, http.StatusBadRequest, model.ResponseHttp{Error: true, Message: "Invalid username or password"})
+			return
+		}
+	}
 	// Decode JSON body
-	if err = json.NewDecoder(r.Body).Decode(&userNew); err != nil {
+	userRequest.Id = user.Id
+	if err = json.NewDecoder(r.Body).Decode(&userRequest); err != nil {
 		s.responseHttp(w, http.StatusBadRequest, model.ResponseHttp{Error: true, Message: fmt.Sprintf("failed to decode body request, err = %s", err.Error())})
 		return
 	}
 
 	// Update user
-	userUpdated, err := s.Service.UpdateUser(userNew)
+	userUpdated, err := s.Service.UpdateUser(userRequest)
 	if err != nil {
-		s.responseHttp(w, http.StatusInternalServerError, model.ResponseHttp{Error: true, Message: fmt.Sprintf("failed to update user %s, err: %s", userNew.Username, err.Error())})
+		s.responseHttp(w, http.StatusInternalServerError, model.ResponseHttp{Error: true, Message: fmt.Sprintf("failed to update user %s, err: %s", userRequest.Username, err.Error())})
+		return
+	}
+
+	if err = reddis.SetUserInfoToRedis(r.Context(), userUpdated); err != nil {
+		s.responseHttp(w, http.StatusInternalServerError, model.ResponseHttp{Error: true, Message: err.Error()})
 		return
 	}
 

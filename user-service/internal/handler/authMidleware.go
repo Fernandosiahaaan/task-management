@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strings"
 	"task-management/user-service/internal/model"
+	"task-management/user-service/internal/reddis"
 
 	"github.com/dgrijalva/jwt-go"
 )
@@ -16,30 +17,25 @@ func (s *UserHandler) AuthMiddleware(next http.Handler) http.Handler {
 
 		authToken := r.Header.Get("Authorization")
 		if authToken == "" {
-			w.WriteHeader(http.StatusUnauthorized)
-			json.NewEncoder(w).Encode(model.ResponseHttp{
-				Error:   true,
-				Message: "Authentication header null",
-			})
+			s.responseHttp(w, http.StatusUnauthorized, model.ResponseHttp{Error: true, Message: "Authentication header null"})
 			return
 		}
 
 		bearerToken := strings.Split(authToken, " ")
 		if len(bearerToken) != 2 {
-			w.WriteHeader(http.StatusUnauthorized)
-			json.NewEncoder(w).Encode(model.ResponseHttp{
-				Error:   true,
-				Message: "Invalid format token",
-			})
+			s.responseHttp(w, http.StatusUnauthorized, model.ResponseHttp{Error: true, Message: "Invalid format token"})
 			return
 		}
 		token, err := s.Service.VerifyToken(bearerToken[1])
 		if err != nil {
-			w.WriteHeader(http.StatusUnauthorized)
-			json.NewEncoder(w).Encode(model.ResponseHttp{
-				Error:   true,
-				Message: "Failed token",
-			})
+			s.responseHttp(w, http.StatusUnauthorized, model.ResponseHttp{Error: true, Message: "Failed token"})
+			return
+		}
+
+		ctxBg := context.Background()
+		_, err = reddis.RedisClient.Get(ctxBg, bearerToken[1]).Result()
+		if err != nil {
+			s.responseHttp(w, http.StatusUnauthorized, model.ResponseHttp{Error: true, Message: "Not found token in reddis"})
 			return
 		}
 
@@ -53,8 +49,9 @@ func (s *UserHandler) AuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), "user", claims)
-		r = r.WithContext(ctx)
+		ctx := context.WithValue(r.Context(), "jwtToken", bearerToken[1])
+		ctx2 := context.WithValue(ctx, "user", claims)
+		r = r.WithContext(ctx2)
 		next.ServeHTTP(w, r)
 	})
 
