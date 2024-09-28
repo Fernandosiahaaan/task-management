@@ -9,19 +9,24 @@ import (
 	"net/http"
 	"os"
 	"task-management/task-service/internal/handler"
+	"task-management/task-service/internal/middleware"
+	"task-management/task-service/internal/reddis"
 	"task-management/task-service/internal/repository"
-	services "task-management/task-service/service"
+	services "task-management/task-service/internal/service"
 
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
 
-func router(userHandler *handler.TaskHandler) {
+func router(taskHandler *handler.TaskHandler) {
 	router := mux.NewRouter()
 	router.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 	}).Methods("GET")
+
+	router.Use(middleware.AuthMiddleware)
+	router.HandleFunc("/task/create", taskHandler.TaskCreate).Methods(http.MethodPost)
 
 	fmt.Println("🌐 localhost:4001")
 	err := http.ListenAndServe("localhost:4001", router)
@@ -45,6 +50,12 @@ func main() {
 		log.Fatalf("Could not connect to the database: %v", err)
 	}
 	defer db.Close()
+
+	reddis.RedisClient, err = reddis.NewReddisClient(ctx)
+	if err != nil {
+		log.Fatalf("Could not to redis server. err = %v", err)
+	}
+	defer reddis.RedisClient.Close()
 
 	fmt.Println("🔥 Init Repository...")
 	repo := repository.NewTaskRepository(db, ctx)

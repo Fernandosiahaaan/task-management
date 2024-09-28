@@ -60,6 +60,34 @@ func (r *UserRepository) GetUser(user model.User) (model.User, error) {
 	return existUser, nil
 }
 
+func (r *UserRepository) GetAllUsers() ([]model.User, error) {
+	query := `
+	SELECT id, username, role 
+	FROM users
+	`
+	rows, err := r.DB.QueryContext(r.Ctx, query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var users []model.User
+	for rows.Next() {
+		var user model.User
+		err := rows.Scan(&user.Id, &user.Username, &user.Role)
+		if err != nil {
+			return nil, err
+		}
+		users = append(users, user)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return users, nil
+}
+
 // func (r *UserRepository) GetUserById(id int64) (int64, error) {
 // 	var id int64
 // 	query := `

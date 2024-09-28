@@ -11,6 +11,7 @@ import (
 	"os/signal"
 	"syscall"
 	"task-management/user-service/internal/handler"
+	"task-management/user-service/internal/middleware"
 	"task-management/user-service/internal/reddis"
 	"task-management/user-service/internal/repository"
 	"task-management/user-service/internal/service"
@@ -26,12 +27,13 @@ func router(userHandler *handler.UserHandler) {
 		json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 	}).Methods("GET")
 
-	router.HandleFunc("/user/register", userHandler.UserCreate).Methods("POST")
-	router.HandleFunc("/user/login", userHandler.UserLogin).Methods("POST")
-	router.HandleFunc("/user/logout", userHandler.UserLogout).Methods("POST")
-	router.Handle("/user/aboutme", userHandler.AuthMiddleware(http.HandlerFunc(userHandler.UserGet))).Methods("GET")
-	router.Handle("/user/update", userHandler.AuthMiddleware(http.HandlerFunc(userHandler.UserUpdate))).Methods("PUT")
-	router.HandleFunc("/user/protected", userHandler.ProtectedHandler).Methods("GET")
+	router.HandleFunc("/user/register", userHandler.UserCreate).Methods(http.MethodPost)
+	router.HandleFunc("/user/login", userHandler.UserLogin).Methods(http.MethodPost)
+	router.HandleFunc("/user/logout", userHandler.UserLogout).Methods(http.MethodPost)
+	router.Handle("/user/aboutme", middleware.AuthMiddleware(http.HandlerFunc(userHandler.UserGet))).Methods(http.MethodGet)
+	router.Handle("/users", middleware.AuthMiddleware(http.HandlerFunc(userHandler.UsersGetAll))).Methods(http.MethodGet)
+	router.Handle("/user/update", middleware.AuthMiddleware(http.HandlerFunc(userHandler.UserUpdate))).Methods(http.MethodPut)
+	router.HandleFunc("/user/protected", userHandler.ProtectedHandler).Methods(http.MethodGet)
 
 	fmt.Println("🌐 localhost:4000")
 	err := http.ListenAndServe("localhost:4000", router)

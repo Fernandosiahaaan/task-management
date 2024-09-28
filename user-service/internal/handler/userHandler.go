@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
+	"task-management/user-service/internal/middleware"
 	"task-management/user-service/internal/model"
 	"task-management/user-service/internal/reddis"
 	"task-management/user-service/internal/service"
@@ -61,7 +62,7 @@ func (s *UserHandler) UserLogin(w http.ResponseWriter, r *http.Request) {
 
 	user, err := s.Service.GetUser(user)
 	if err == nil {
-		tokenString, err := s.Service.CreateToken(user.Username, user.Password)
+		tokenString, err := middleware.CreateToken(user.Username, user.Password)
 		if err != nil {
 			s.responseHttp(w, http.StatusInternalServerError, model.ResponseHttp{Error: true, Message: "failed created token"})
 		}
@@ -100,9 +101,9 @@ func (s *UserHandler) UserLogout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err := s.Service.VerifyToken(bearerToken[1])
+	_, err := middleware.VerifyToken(bearerToken[1])
 	if err != nil {
-		s.responseHttp(w, http.StatusUnauthorized, model.ResponseHttp{Error: true, Message: "Failed Token"})
+		s.responseHttp(w, http.StatusUnauthorized, model.ResponseHttp{Error: true, Message: fmt.Sprintf("Failed Token; err = %s", err)})
 		return
 	}
 
@@ -213,11 +214,31 @@ func (s *UserHandler) ProtectedHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	tokenString = tokenString[len("Bearer "):]
 
-	_, err := s.Service.VerifyToken(tokenString)
+	_, err := middleware.VerifyToken(tokenString)
 	if err != nil {
 		s.responseHttp(w, http.StatusUnauthorized, model.ResponseHttp{Error: true, Message: "Invalid token"})
 		return
 	}
 	fmt.Fprint(w, "Welcome to the the protected area")
 
+}
+
+func (s *UserHandler) UsersGetAll(w http.ResponseWriter, r *http.Request) {
+	// receive value form context midleware
+	userClaims := r.Context().Value("user").(jwt.MapClaims)
+
+	// get user from db
+	_, ok := userClaims["username"].(string)
+	_, ok2 := userClaims["password"].(string)
+	if !ok || !ok2 {
+		s.responseHttp(w, http.StatusUnauthorized, model.ResponseHttp{Error: true, Message: "Invalid jwt token"})
+		return
+	}
+	users, err := s.Service.GetAllUsers()
+	if err != nil {
+		s.responseHttp(w, http.StatusBadRequest, model.ResponseHttp{Error: true, Message: "Invalid username and password"})
+		return
+	}
+
+	s.responseHttp(w, http.StatusOK, model.ResponseHttp{Error: false, Message: "success get info me", Data: users})
 }

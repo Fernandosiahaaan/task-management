@@ -41,6 +41,14 @@ func (s *UserService) GetUser(user model.User) (model.User, error) {
 	return existUser, nil
 }
 
+func (s *UserService) GetAllUsers() ([]model.User, error) {
+	existUser, err := s.Repo.GetAllUsers()
+	if err != nil {
+		return existUser, err
+	}
+	return existUser, nil
+}
+
 func (s *UserService) UpdateUser(user model.User) (model.User, error) {
 	user.UpdatedAt = time.Now()
 	id, err := s.Repo.UpdateUser(user)
