@@ -26,14 +26,14 @@ func router(userHandler *handler.UserHandler) {
 		json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 	}).Methods("GET")
 
-	router.HandleFunc("/register", userHandler.UserCreate).Methods("POST")
-	router.HandleFunc("/login", userHandler.UserLogin).Methods("POST")
-	router.HandleFunc("/logout", userHandler.UserLogout).Methods("POST")
-	router.Handle("/aboutme", userHandler.AuthMiddleware(http.HandlerFunc(userHandler.UserGet))).Methods("GET")
-	router.Handle("/update", userHandler.AuthMiddleware(http.HandlerFunc(userHandler.UserUpdate))).Methods("PUT")
-	router.HandleFunc("/protected", userHandler.ProtectedHandler).Methods("GET")
+	router.HandleFunc("/user/register", userHandler.UserCreate).Methods("POST")
+	router.HandleFunc("/user/login", userHandler.UserLogin).Methods("POST")
+	router.HandleFunc("/user/logout", userHandler.UserLogout).Methods("POST")
+	router.Handle("/user/aboutme", userHandler.AuthMiddleware(http.HandlerFunc(userHandler.UserGet))).Methods("GET")
+	router.Handle("/user/update", userHandler.AuthMiddleware(http.HandlerFunc(userHandler.UserUpdate))).Methods("PUT")
+	router.HandleFunc("/user/protected", userHandler.ProtectedHandler).Methods("GET")
 
-	fmt.Println("🌐 Starting the server")
+	fmt.Println("🌐 localhost:4000")
 	err := http.ListenAndServe("localhost:4000", router)
 	if err != nil {
 		fmt.Println("Could not start the server", err)
@@ -45,7 +45,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	err := godotenv.Load(".env")
+	err := godotenv.Load("../.env")
 	if err != nil {
 		log.Fatalf("Error loading .env file")
 	}

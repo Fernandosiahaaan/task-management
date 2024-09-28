@@ -3,16 +3,22 @@ package main
 import (
 	"fmt"
 	"log"
+	"os"
 
 	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
 )
 
 func main() {
-	fmt.Println("--User Service Migrate Start--")
-	dbURL := "postgres://user:password@localhost:5442/mydatabase?sslmode=disable"
+	fmt.Println("--Task Service Migrate Start--")
+	err := godotenv.Load("../.env")
+	if err != nil {
+		log.Fatalf("Error loading .env file")
+	}
+	dbURL := os.Getenv("POSTGRES_URI")
 	m, err := migrate.New(
 		"file://files",
 		dbURL,
