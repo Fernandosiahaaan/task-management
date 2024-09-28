@@ -14,6 +14,7 @@ import (
 	"task-management/task-service/internal/repository"
 	services "task-management/task-service/internal/service"
 
+	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
@@ -29,7 +30,17 @@ func router(taskHandler *handler.TaskHandler) {
 	router.HandleFunc("/task/create", taskHandler.TaskCreate).Methods(http.MethodPost)
 
 	fmt.Println("🌐 localhost:4001")
-	err := http.ListenAndServe("localhost:4001", router)
+	// err := http.ListenAndServe("localhost:4001", router)
+	err := http.ListenAndServe("localhost:4001",
+		handlers.CORS(
+			handlers.AllowedOrigins([]string{"*"}),                             // Allow all origins
+			handlers.AllowedMethods([]string{"POST", "GET", "PUT", "OPTIONS"}), // Allow specific methods
+			handlers.AllowedHeaders([]string{"Content-Type", "Authorization"}), // Allow specific headers
+		)(router))
+	if err != nil {
+		log.Fatalf("Could not start the server: %v", err)
+	}
+	fmt.Println("Server started. Listening on port 4000")
 	if err != nil {
 		fmt.Println("Could not start the server", err)
 	}

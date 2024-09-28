@@ -4,12 +4,14 @@ services:
   redis:
     image: redis
     container_name: redis
+    platform: linux/amd64
     ports:
       - "6379:6379"
 
   rabbitmq:
     image: rabbitmq:management
     container_name: rabbitmq
+    platform: linux/amd64
     ports:
       - "5672:5672"
       - "15672:15672"
@@ -20,6 +22,7 @@ services:
   postgres:
     image: postgres
     container_name: postgres
+    platform: linux/amd64
     ports:
       - "5442:5432"
     environment:
@@ -30,6 +33,7 @@ services:
   mysql:
     image: mysql:5.7
     container_name: mysql
+    platform: linux/amd64
     ports:
       - "3306:3306"
     environment:
