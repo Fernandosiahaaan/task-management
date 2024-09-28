@@ -41,6 +41,7 @@ func (s *UserHandler) UserCreate(w http.ResponseWriter, r *http.Request) {
 		s.responseHttp(w, http.StatusBadRequest, model.ResponseHttp{Error: true, Message: "failed parse body request"})
 		return
 	}
+	user.Role = "user"
 
 	userId, err := s.Service.CreateNewUser(user)
 	if err != nil {
@@ -58,7 +59,6 @@ func (s *UserHandler) UserLogin(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
 		s.responseHttp(w, http.StatusBadRequest, model.ResponseHttp{Error: true, Message: "failed body request"})
 	}
-	fmt.Println("user = ", user)
 
 	user, err := s.Service.GetUser(user)
 	if err == nil {
