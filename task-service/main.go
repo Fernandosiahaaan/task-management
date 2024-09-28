@@ -17,7 +17,7 @@ import (
 	_ "github.com/lib/pq"
 )
 
-func router(userHandler *handler.UserHandler) {
+func router(userHandler *handler.TaskHandler) {
 	router := mux.NewRouter()
 	router.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(map[string]string{"status": "success"})
@@ -47,13 +47,13 @@ func main() {
 	defer db.Close()
 
 	fmt.Println("🔥 Init Repository...")
-	repo := repository.NewuserRepository(db, ctx)
+	repo := repository.NewTaskRepository(db, ctx)
 
 	fmt.Println("🔥 Init Service...")
-	taskService := services.NewUserService(repo)
+	taskService := services.NewTaskService(repo)
 
 	fmt.Println("🔥 Init Handler...")
-	taskHandler := handler.NewUserHandler(taskService, ctx)
+	taskHandler := handler.NewTaskHandler(taskService, ctx)
 
 	router(taskHandler)
 

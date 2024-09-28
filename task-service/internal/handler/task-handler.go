@@ -5,11 +5,11 @@ import (
 	"task-management/task-service/service"
 )
 
-type UserHandler struct {
-	Service *service.UserService
+type TaskHandler struct {
+	Service *service.TaskService
 	Ctx     context.Context
 }
 
-func NewUserHandler(service *service.UserService, ctx context.Context) *UserHandler {
-	return &UserHandler{Service: service, Ctx: ctx}
+func NewTaskHandler(service *service.TaskService, ctx context.Context) *TaskHandler {
+	return &TaskHandler{Service: service, Ctx: ctx}
 }

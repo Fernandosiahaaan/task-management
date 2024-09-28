@@ -47,7 +47,7 @@ func (s *UserHandler) UserCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	user.Id = userId
-	s.responseHttp(w, http.StatusCreated, model.ResponseHttp{Error: false, Message: "Product created", Data: user})
+	s.responseHttp(w, http.StatusCreated, model.ResponseHttp{Error: false, Message: "User created", Data: user})
 }
 
 func (s *UserHandler) UserLogin(w http.ResponseWriter, r *http.Request) {

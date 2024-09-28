@@ -1,11 +1,32 @@
 package service
 
-import "task-management/task-service/internal/repository"
+import (
+	"database/sql"
+	"errors"
+	"task-management/task-service/internal/model"
+	"task-management/task-service/internal/repository"
+	"time"
+)
 
-type UserService struct {
-	Repo *repository.UserRepository
+type TaskService struct {
+	Repo *repository.TaskRepository
 }
 
-func NewUserService(repo *repository.UserRepository) *UserService {
-	return &UserService{Repo: repo}
+func NewTaskService(repo *repository.TaskRepository) *TaskService {
+	return &TaskService{Repo: repo}
+}
+
+func (s *TaskService) CreateNewUser(task *model.Task) (*int64, error) {
+	existTask, err := s.Repo.GetTask(task)
+	if err != nil && !errors.Is(sql.ErrNoRows, err) {
+		return nil, err
+	}
+
+	if existTask != nil {
+		return nil, errors.New("task already created")
+	}
+
+	task.CreatedAt = time.Now()
+	task.UpdatedAt = time.Now()
+	return s.Repo.CreateNewTask(task)
 }
