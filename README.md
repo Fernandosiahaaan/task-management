@@ -18,13 +18,13 @@ Pengembangan yang dilakukan menggunakan beberapa stack tech, seperti :
 
 ## 🖊 Documentation
 
-- file tech doc confluence = [Tech Documentaion](https://www.notion.so/Collaborative-Task-Management-Backend-1107b515908e80a997c3ee75907ffb2b?pvs=4)
+- documentation : [Tech Documentaion](https://www.notion.so/Collaborative-Task-Management-Backend-1107b515908e80a997c3ee75907ffb2b?pvs=4)
 
 ## 🖊 PreRequire
 
 - install [vscode](https://code.visualstudio.com/download)
 - install [docker dekstop](https://www.docker.com/products/docker-desktop/) for your OS
-- Download [Golang binary](https://go.dev/doc/install)
+- Download [golang binary](https://go.dev/doc/install)
 
 ## 🖊 Start/ Run project
 
