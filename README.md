@@ -2,8 +2,8 @@
 
 ## 🖊 Overview
 
-Collaborative Task Management System adalah sebuah platform yang dirancang untuk membantu pengguna mengelola tugas-tugas mereka secara efisien, baik untuk penggunaan pribadi maupun dalam konteks tim. Sistem ini memungkinkan pengguna untuk membuat, melacak, memperbarui, dan menghapus tugas secara real-time, serta memberikan kemampuan kolaborasi antara anggota tim, termasuk notifikasi real-time, pengingat tugas, dan pencatatan aktivitas.
-Pengembangan yang dilakukan menggunakan beberapa stack tech, seperti :
+Collaborative Task Management System is a platform designed to help users efficiently manage their tasks, whether for personal use or in a team context. This system allows users to create, track, update, and delete tasks in real-time, as well as provides collaboration capabilities among team members, including real-time notifications, task reminders, and activity logging.
+The development utilizes several tech stacks, such as:
 
 - Golang + Framework gorilla mux
 - Microservice (user service, task service, log service, notification service).

@@ -43,5 +43,5 @@ func (s *TaskHandler) TaskCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	task.Id = taskId
-	model.CreateResponseHttp(w, http.StatusCreated, model.ResponseHttp{Error: false, Message: "User created", Data: task})
+	model.CreateResponseHttp(w, http.StatusCreated, model.ResponseHttp{Error: false, Message: "Task created", Data: task})
 }
