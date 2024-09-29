@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	"task-management/user-service/internal/middleware"
 	"task-management/user-service/internal/model"
 	"task-management/user-service/internal/reddis"
 	"task-management/user-service/internal/service"
+	"task-management/user-service/middleware"
 
 	"github.com/dgrijalva/jwt-go"
 )

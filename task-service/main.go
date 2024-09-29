@@ -9,10 +9,10 @@ import (
 	"net/http"
 	"os"
 	"task-management/task-service/internal/handler"
-	"task-management/task-service/internal/middleware"
 	"task-management/task-service/internal/reddis"
-	"task-management/task-service/internal/repository"
 	services "task-management/task-service/internal/service"
+	"task-management/task-service/middleware"
+	"task-management/task-service/repository"
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"

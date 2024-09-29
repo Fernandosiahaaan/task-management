@@ -5,7 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"task-management/task-service/internal/model"
-	"task-management/task-service/internal/repository"
+	"task-management/task-service/repository"
 )
 
 type TaskService struct {

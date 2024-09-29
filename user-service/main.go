@@ -11,10 +11,10 @@ import (
 	"os/signal"
 	"syscall"
 	"task-management/user-service/internal/handler"
-	"task-management/user-service/internal/middleware"
 	"task-management/user-service/internal/reddis"
-	"task-management/user-service/internal/repository"
 	"task-management/user-service/internal/service"
+	"task-management/user-service/middleware"
+	"task-management/user-service/repository"
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"

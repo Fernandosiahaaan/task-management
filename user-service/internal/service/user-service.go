@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"task-management/user-service/internal/model"
-	"task-management/user-service/internal/repository"
+	"task-management/user-service/repository"
 	"time"
 
 	"github.com/google/uuid"
