@@ -1,45 +1,35 @@
-package grpc
+package main
 
 import (
 	"context"
 	"fmt"
 	"log"
-	"net"
-	pb "task-management/task-service/internal/model/user"
+	pb "task-management/task-service/internal/gRPC/user"
+	"time"
 
 	"google.golang.org/grpc"
 )
 
-// Server struct untuk implementasi service
-type server struct {
-	pb.UnimplementedUserServiceServer
-}
-
-// Implementasi method GetUser
-func (s *server) GetUser(ctx context.Context, req *pb.GetUserRequest) (*pb.GetUserResponse, error) {
-	// Simulasi mendapatkan data user
-	user := pb.GetUserResponse{
-		Id:       req.Id,
-		Username: "JohnDoe",
-		Email:    "johndoe@example.com",
-	}
-	fmt.Printf("Received request for user ID: %s\n", req.Id)
-	return &user, nil
-}
-
-func RunGrpc() {
-	// Listen pada port 50051
-	lis, err := net.Listen("tcp", ":50051")
+func main() {
+	// Membuat koneksi ke server gRPC
+	conn, err := grpc.Dial("localhost:50051", grpc.WithInsecure(), grpc.WithBlock())
 	if err != nil {
-		log.Fatalf("failed to listen: %v", err)
+		log.Fatalf("Did not connect: %v", err)
+	}
+	defer conn.Close()
+
+	c := pb.NewUserServiceClient(conn)
+
+	// Membuat request ke server
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+
+	// Panggil RPC GetUser dengan ID user
+	res, err := c.GetUser(ctx, &pb.GetUserRequest{Id: "1"})
+	if err != nil {
+		log.Fatalf("Could not get user: %v", err)
 	}
 
-	// Membuat gRPC server
-	s := grpc.NewServer()
-	pb.RegisterUserServiceServer(s, &server{})
-
-	fmt.Println("Server is running on port 50051...")
-	if err := s.Serve(lis); err != nil {
-		log.Fatalf("failed to serve: %v", err)
-	}
+	// Cetak hasil response
+	fmt.Printf("User ID: %s, Username: %s, Email: %s\n", res.Id, res.Username, res.Email)
 }

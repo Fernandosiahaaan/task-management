@@ -29,9 +29,14 @@ func router(taskHandler *handler.TaskHandler) {
 	router.Use(middleware.AuthMiddleware)
 	router.HandleFunc("/task/create", taskHandler.TaskCreate).Methods(http.MethodPost)
 
-	fmt.Println("🌐 localhost:4001")
+	portHttp := os.Getenv("PORT_HTTP")
+	if portHttp == "" {
+		portHttp = "4001"
+	}
+	localHost := fmt.Sprintf("localhost:%s", portHttp)
+	fmt.Printf("🌐 %s\n", localHost)
 	// err := http.ListenAndServe("localhost:4001", router)
-	err := http.ListenAndServe("localhost:4001",
+	err := http.ListenAndServe(localHost,
 		handlers.CORS(
 			handlers.AllowedOrigins([]string{"*"}),                             // Allow all origins
 			handlers.AllowedMethods([]string{"POST", "GET", "PUT", "OPTIONS"}), // Allow specific methods
@@ -51,7 +56,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	err := godotenv.Load("../.env")
+	err := godotenv.Load(".env")
 	if err != nil {
 		log.Fatalf("Error loading .env file")
 	}

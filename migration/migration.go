@@ -14,7 +14,7 @@ import (
 
 func main() {
 	fmt.Println("--Microservice Migrate Start--")
-	err := godotenv.Load("../.env")
+	err := godotenv.Load(".env")
 	if err != nil {
 		log.Fatalf("Error loading .env file")
 	}

@@ -36,9 +36,14 @@ func router(userHandler *handler.UserHandler) {
 	router.Handle("/user/update", middleware.AuthMiddleware(http.HandlerFunc(userHandler.UserUpdate))).Methods(http.MethodPut)
 	router.HandleFunc("/user/protected", userHandler.ProtectedHandler).Methods(http.MethodGet)
 
-	fmt.Println("🌐 localhost:4000")
+	portHttp := os.Getenv("PORT_HTTP")
+	if portHttp == "" {
+		portHttp = "4000"
+	}
+	localHost := fmt.Sprintf("localhost:%s", portHttp)
+	fmt.Printf("🌐 %s\n", localHost)
 	// err := http.ListenAndServe("localhost:4000", router)
-	err := http.ListenAndServe("localhost:4000",
+	err := http.ListenAndServe(localHost,
 		handlers.CORS(
 			handlers.AllowedOrigins([]string{"*"}),                             // Allow all origins
 			handlers.AllowedMethods([]string{"POST", "GET", "PUT", "OPTIONS"}), // Allow specific methods
@@ -59,7 +64,7 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	err := godotenv.Load("../.env")
+	err := godotenv.Load(".env")
 	if err != nil {
 		log.Fatalf("Error loading .env file")
 	}
