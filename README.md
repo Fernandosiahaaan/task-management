@@ -1,6 +1,6 @@
-# Collaborative Task Management (Backend)
+# Collaborative Task Management (Backend) 💻
 
-## Overview
+## Overview 🖊
 
 Collaborative Task Management System adalah sebuah platform yang dirancang untuk membantu pengguna mengelola tugas-tugas mereka secara efisien, baik untuk penggunaan pribadi maupun dalam konteks tim. Sistem ini memungkinkan pengguna untuk membuat, melacak, memperbarui, dan menghapus tugas secara real-time, serta memberikan kemampuan kolaborasi antara anggota tim, termasuk notifikasi real-time, pengingat tugas, dan pencatatan aktivitas.
 Pengembangan yang dilakukan menggunakan beberapa stack tech, seperti :
@@ -16,18 +16,18 @@ Pengembangan yang dilakukan menggunakan beberapa stack tech, seperti :
 - MongoDB (No SQL DB) -> for logging microservice DB
 - Docker -> for setup env & bundling all stack tech
 
-## PreRequire
+## PreRequire 🖊
 
 - install vscode
 - install docker dekstop for your OS
 
-## Microservice Architecture
+## Microservice Architecture 🖊
 
-### User Microservicce
+### User Microservicce 📌
 
 User service akan menghandle terkait dari proses login, loguout, update user, dll.
 
-#### DB Schema
+#### DB Schema 🛠
 
 | Column Name | Data Type    | Constraints                   | Description                                 |
 | ----------- | ------------ | ----------------------------- | ------------------------------------------- |
@@ -39,7 +39,7 @@ User service akan menghandle terkait dari proses login, loguout, update user, dl
 | created_at  | TIMESTAMP    | DEFAULT CURRENT_TIMESTAMP     | Timestamp when the user was created         |
 | updated_at  | TIMESTAMP    | DEFAULT CURRENT_TIMESTAMP     | Timestamp when the user was last updated    |
 
-#### API Endpoint
+#### API Endpoint ♻️
 
 | Method | URI              | Description                                               |
 | ------ | ---------------- | --------------------------------------------------------- |
