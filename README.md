@@ -16,36 +16,40 @@ Pengembangan yang dilakukan menggunakan beberapa stack tech, seperti :
 - MongoDB (No SQL DB) -> for logging microservice DB
 - Docker -> for setup env & bundling all stack tech
 
+## Documentation
+
+- file tech doc confluence = [Tech Documentaion](https://www.notion.so/Collaborative-Task-Management-Backend-1107b515908e80a997c3ee75907ffb2b?pvs=4)
+
 ## 🖊 PreRequire
 
 - install vscode
 - install docker dekstop for your OS
 
-## 🖊 Microservice Architecture
+## 🖊 Start/ Run project
 
-### 📌 User Microservicce
+Runing docker compose
 
-User service akan menghandle terkait dari proses login, loguout, update user, dll.
+```
+cd /task-management
+docker-compose up -d
+```
 
-#### 🛠 DB Schema
+After success, run migration
 
-| Column Name | Data Type    | Constraints                   | Description                                 |
-| ----------- | ------------ | ----------------------------- | ------------------------------------------- |
-| id          | UUID         | PRIMARY KEY, UNIQUE, NOT NULL | Unique identifier for each user             |
-| username    | VARCHAR(50)  | UNIQUE, NOT NULL              | Username for user login                     |
-| password    | VARCHAR(100) | NOT NULL                      | password for user authentication            |
-| email       | VARCHAR(100) | NOT NULL                      | User's email address                        |
-| role        | VARCHAR(100) | NOT NULL                      | User's role (e.g., admin, user, superadmin) |
-| created_at  | TIMESTAMP    | DEFAULT CURRENT_TIMESTAMP     | Timestamp when the user was created         |
-| updated_at  | TIMESTAMP    | DEFAULT CURRENT_TIMESTAMP     | Timestamp when the user was last updated    |
+```
+cd /migration
+go run .
+```
 
-#### ♻️ API Endpoint
+After success, run all microservice.
 
-| Method | URI              | Description                                               |
-| ------ | ---------------- | --------------------------------------------------------- |
-| POST   | `/user/register` | Mendaftarkan pengguna baru.                               |
-| POST   | `/user/login`    | Mengotentikasi pengguna dan mengembalikan token JWT.      |
-| POST   | `/user/logout`   | Logout pengguna dengan menghapus token sesi.              |
-| GET    | `/user/aboutme`  | Mendapatkan informasi tentang pengguna yang sedang login. |
-| GET    | `/users`         | Mendapatkan daftar semua pengguna .                       |
-| PUT    | `/user/update`   | Memperbarui informasi pengguna yang sedang login .        |
+```
+# User microservice
+cd /user-service
+go run .
+
+# task microservice
+cd /task-service
+go run .
+
+```
