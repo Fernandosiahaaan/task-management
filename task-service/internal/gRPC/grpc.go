@@ -45,6 +45,8 @@ func (client *ClientGrpc) RequestUserInfo(userId string, timeout time.Duration) 
 	res, err := client.Client.GetUser(ctx, &pb.GetUserRequest{UserId: userId})
 	if err != nil {
 		return nil, fmt.Errorf("Could not get user response. err = %s", err.Error())
+	} else if res.IsError {
+		return nil, fmt.Errorf("%s", res.Message)
 	}
 	return res, nil
 	// fmt.Printf("User ID: %s, Username: %s, Email: %s\n; error = %d; message = %s", res.UserId, res.Username, res.Email, res.IsError, res.Message)
@@ -53,4 +55,17 @@ func (client *ClientGrpc) RequestUserInfo(userId string, timeout time.Duration) 
 func (client *ClientGrpc) Stop() {
 	client.Conn.Close()
 	client.Cancel()
+}
+
+func (client *ClientGrpc) ValidateCreatedAndAssignedUUID(assignedTo string, createdBy string) error {
+	// Validate UUID Assigned & Created User
+	_, err := client.RequestUserInfo(createdBy, 1*time.Second)
+	if err != nil {
+		return fmt.Errorf("failed user id of task created by. err %s", err.Error())
+	}
+	_, err = client.RequestUserInfo(assignedTo, 1*time.Second)
+	if err != nil {
+		return fmt.Errorf("failed user id of task assigned to. err %s", err.Error())
+	}
+	return nil
 }

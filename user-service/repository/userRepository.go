@@ -60,6 +60,25 @@ func (r *UserRepository) GetUser(user model.User) (model.User, error) {
 	return existUser, nil
 }
 
+func (r *UserRepository) GetUserById(user model.User) (model.User, error) {
+	query := `
+	SELECT id, username, password, email, role FROM users 
+	WHERE id=$1
+	`
+	var existUser model.User
+	err := r.DB.QueryRowContext(r.Ctx, query, user.Id).Scan(
+		&existUser.Id,
+		&existUser.Username,
+		&existUser.Password,
+		&existUser.Email,
+		&existUser.Role,
+	)
+	if err != nil {
+		return existUser, err
+	}
+	return existUser, nil
+}
+
 func (r *UserRepository) GetAllUsers() ([]model.User, error) {
 	query := `
 	SELECT id, username, role 

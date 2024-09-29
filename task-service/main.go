@@ -8,6 +8,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	grpc "task-management/task-service/internal/gRPC"
 	"task-management/task-service/internal/handler"
 	"task-management/task-service/internal/reddis"
 	services "task-management/task-service/internal/service"
@@ -71,6 +72,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Could not to redis server. err = %v", err)
 	}
+	fmt.Println("🔥 Init Redis...")
 	defer reddis.RedisClient.Close()
 
 	fmt.Println("🔥 Init Repository...")
@@ -79,8 +81,18 @@ func main() {
 	fmt.Println("🔥 Init Service...")
 	taskService := services.NewTaskService(repo)
 
+	var paramGrpc grpc.ParamClientGrpc = grpc.ParamClientGrpc{
+		Ctx:  ctx,
+		Port: os.Getenv("GRPC_PORT"),
+	}
+	clientGrpc, err := grpc.ConnectToServerGrpc(paramGrpc)
+	if err != nil {
+		log.Fatalf("Could not connect gRPC client. err = %s", err.Error())
+	}
+	fmt.Println("🔥 Init gRPC Client...")
+
 	fmt.Println("🔥 Init Handler...")
-	taskHandler := handler.NewTaskHandler(taskService, ctx)
+	taskHandler := handler.NewTaskHandler(taskService, ctx, clientGrpc)
 
 	router(taskHandler)
 

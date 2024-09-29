@@ -5,17 +5,19 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	grpc "task-management/task-service/internal/gRPC"
 	"task-management/task-service/internal/model"
 	"task-management/task-service/internal/service"
 )
 
 type TaskHandler struct {
-	Service *service.TaskService
-	Ctx     context.Context
+	Service    *service.TaskService
+	Ctx        context.Context
+	ClientGrpc grpc.ClientGrpc
 }
 
-func NewTaskHandler(service *service.TaskService, ctx context.Context) *TaskHandler {
-	return &TaskHandler{Service: service, Ctx: ctx}
+func NewTaskHandler(service *service.TaskService, ctx context.Context, clientGrpc grpc.ClientGrpc) *TaskHandler {
+	return &TaskHandler{Service: service, Ctx: ctx, ClientGrpc: clientGrpc}
 }
 
 func (s *TaskHandler) TaskCreate(w http.ResponseWriter, r *http.Request) {
@@ -27,6 +29,13 @@ func (s *TaskHandler) TaskCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	fmt.Println("task = ", task)
+
+	// Validate UUID of user Assigned & Created User
+	err := s.ClientGrpc.ValidateCreatedAndAssignedUUID(task.AssignedTo, task.CreatedBy)
+	if err != nil {
+		model.CreateResponseHttp(w, http.StatusBadRequest, model.ResponseHttp{Error: true, Message: err.Error()})
+		return
+	}
 
 	taskId, err := s.Service.CreateNewTask(&task)
 	if err != nil {

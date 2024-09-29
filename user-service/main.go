@@ -10,6 +10,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	grpc "task-management/user-service/internal/gRPC"
 	"task-management/user-service/internal/handler"
 	"task-management/user-service/internal/reddis"
 	"task-management/user-service/internal/service"
@@ -41,7 +42,7 @@ func router(userHandler *handler.UserHandler) {
 		portHttp = "4000"
 	}
 	localHost := fmt.Sprintf("localhost:%s", portHttp)
-	fmt.Printf("🌐 %s\n", localHost)
+	fmt.Printf("🌐 HTTP Api %s\n", localHost)
 	// err := http.ListenAndServe("localhost:4000", router)
 	err := http.ListenAndServe(localHost,
 		handlers.CORS(
@@ -79,6 +80,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("Could not to redis server. err = %v", err)
 	}
+	fmt.Println("🔥 Init Redis...")
 	defer reddis.RedisClient.Close()
 
 	fmt.Println("🔥 Init Repository...")
@@ -87,8 +89,19 @@ func main() {
 	fmt.Println("🔥 Init Service...")
 	userService := service.NewUserService(repo)
 
+	var paramGrpc grpc.ParamServerGrpc = grpc.ParamServerGrpc{
+		Ctx:     ctx,
+		Port:    os.Getenv("GRPC_PORT"),
+		Service: userService,
+	}
+	serverGrpc, err := grpc.NewConnect(paramGrpc)
+	if err != nil {
+		log.Fatalf("Could not connect to gRPC server. err = %s", err.Error())
+	}
+	fmt.Println("🔥 Init gRPC Server...")
+
 	fmt.Println("🔥 Init Handler...")
-	userHandler := handler.NewUserHandler(userService, ctx)
+	userHandler := handler.NewUserHandler(userService, ctx, serverGrpc)
 
 	router(userHandler)
 

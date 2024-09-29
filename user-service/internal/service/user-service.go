@@ -3,6 +3,7 @@ package service
 import (
 	"database/sql"
 	"errors"
+	"fmt"
 	"task-management/user-service/internal/model"
 	"task-management/user-service/repository"
 	"time"
@@ -39,6 +40,18 @@ func (s *UserService) GetUser(user model.User) (model.User, error) {
 		return existUser, err
 	}
 	return existUser, nil
+}
+
+func (s *UserService) GetUserById(user *model.User) (*model.User, error) {
+	fmt.Println("user = ", user)
+	existUser, err := s.Repo.GetUserById(*user)
+	if err != nil && err != sql.ErrNoRows {
+		return &existUser, err
+	}
+	if err == sql.ErrNoRows {
+		return nil, nil
+	}
+	return &existUser, nil
 }
 
 func (s *UserService) GetAllUsers() ([]model.User, error) {
