@@ -13,7 +13,7 @@ Pengembangan yang dilakukan menggunakan beberapa stack tech, seperti :
 - RabbitMq -> message queue for async communication microservice (in progress)
 - gRPC (Google Remote Procedure Call) -> for sync communication microservice
 - PostgreeDB (SQL DB) -> for task, and user microservice DB
-- MongoDB (No SQL DB) -> for logging microservice DB
+- MongoDB (No SQL DB) -> for logging microservice DB (in progress)
 - Docker -> for setup env & bundling all stack tech
 
 ## 🖊 Documentation
