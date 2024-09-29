@@ -16,12 +16,14 @@ type server struct {
 
 // Implementasi GetUser RPC
 func (s *server) GetUser(ctx context.Context, req *pb.GetUserRequest) (*pb.GetUserResponse, error) {
-	fmt.Printf("Received request for User ID: %s\n", req.Id)
+	fmt.Printf("Received request for User ID: %s\n", req.UserId)
 	// Dummy data
 	return &pb.GetUserResponse{
-		Id:       req.Id,
+		UserId:   req.UserId,
 		Username: "john_doe",
 		Email:    "john_doe@example.com",
+		IsError:  false,
+		Message:  "succcess get data",
 	}, nil
 }
 

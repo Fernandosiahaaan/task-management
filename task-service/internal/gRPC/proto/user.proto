@@ -9,11 +9,13 @@ service UserService {
 }
 
 message GetUserRequest {
-  string id = 1;
+  string user_id = 1;
 }
 
 message GetUserResponse {
-  string id = 1;
+  string user_id = 1;
   string username = 2;
   string email = 3;
+  bool is_error = 4;
+  string message = 5;  
 }

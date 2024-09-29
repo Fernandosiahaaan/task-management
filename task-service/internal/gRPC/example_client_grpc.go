@@ -25,11 +25,11 @@ func main() {
 	defer cancel()
 
 	// Panggil RPC GetUser dengan ID user
-	res, err := c.GetUser(ctx, &pb.GetUserRequest{Id: "1"})
+	res, err := c.GetUser(ctx, &pb.GetUserRequest{UserId: "1"})
 	if err != nil {
 		log.Fatalf("Could not get user: %v", err)
 	}
 
 	// Cetak hasil response
-	fmt.Printf("User ID: %s, Username: %s, Email: %s\n", res.Id, res.Username, res.Email)
+	fmt.Printf("User ID: %s, Username: %s, Email: %s\n; error = %d; message = %s", res.UserId, res.Username, res.Email, res.IsError, res.Message)
 }
