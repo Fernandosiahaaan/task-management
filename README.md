@@ -16,14 +16,15 @@ Pengembangan yang dilakukan menggunakan beberapa stack tech, seperti :
 - MongoDB (No SQL DB) -> for logging microservice DB
 - Docker -> for setup env & bundling all stack tech
 
-## Documentation
+## 🖊 Documentation
 
 - file tech doc confluence = [Tech Documentaion](https://www.notion.so/Collaborative-Task-Management-Backend-1107b515908e80a997c3ee75907ffb2b?pvs=4)
 
 ## 🖊 PreRequire
 
-- install vscode
-- install docker dekstop for your OS
+- install [vscode](https://code.visualstudio.com/download)
+- install [docker dekstop](https://www.docker.com/products/docker-desktop/) for your OS
+- Download [Golang binary](https://go.dev/doc/install)
 
 ## 🖊 Start/ Run project
 
