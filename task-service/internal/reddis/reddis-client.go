@@ -2,8 +2,10 @@ package reddis
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log"
+	"task-management/task-service/internal/model"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -28,4 +30,16 @@ func NewReddisClient(ctx context.Context) (*redis.Client, error) {
 	}
 	fmt.Println("Connected to Redis:", pong)
 	return client, nil
+}
+
+func GetLoginInfoFromRedis(ctx context.Context, jwtToken string) (loginInfo model.LoginCacheData, err error) {
+	loginJson, err := RedisClient.Get(ctx, jwtToken).Result()
+	if err != nil {
+		return loginInfo, fmt.Errorf("failed get login info from redis")
+	}
+	err = json.Unmarshal([]byte(loginJson), &loginInfo)
+	if err != nil {
+		return loginInfo, fmt.Errorf("failed convert data login info from json")
+	}
+	return loginInfo, nil
 }

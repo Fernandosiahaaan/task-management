@@ -21,6 +21,12 @@ type UserHandler struct {
 	gRPCServer grpc.ServerGrpc
 }
 
+const (
+	MessageFailedToken string = "Failed Token"
+	MessageFailedRedis string = "Failed Login Session"
+	MessageFailedJWT   string = "Invalid JWT Token"
+)
+
 func NewUserHandler(service *service.UserService, ctx context.Context, serverGrpc grpc.ServerGrpc) *UserHandler {
 	go serverGrpc.StartListen()
 	return &UserHandler{Service: service, Ctx: ctx, gRPCServer: serverGrpc}
@@ -84,7 +90,6 @@ func (s *UserHandler) UserLogin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	model.CreateResponseHttp(w, http.StatusBadRequest, model.ResponseHttp{Error: true, Message: err.Error()})
-	return
 }
 
 func (s *UserHandler) UserLogout(w http.ResponseWriter, r *http.Request) {
@@ -103,7 +108,7 @@ func (s *UserHandler) UserLogout(w http.ResponseWriter, r *http.Request) {
 
 	_, err := middleware.VerifyToken(bearerToken[1])
 	if err != nil {
-		model.CreateResponseHttp(w, http.StatusUnauthorized, model.ResponseHttp{Error: true, Message: fmt.Sprintf("Failed Token; err = %s", err)})
+		model.CreateResponseHttp(w, http.StatusUnauthorized, model.ResponseHttp{Error: true, Message: fmt.Sprintf("%s; err = %s", MessageFailedToken, err)})
 		return
 	}
 
@@ -127,7 +132,7 @@ func (s *UserHandler) UserGet(w http.ResponseWriter, r *http.Request) {
 	// get login info from redis
 	loginInfo, err := reddis.GetLoginInfoFromRedis(r.Context(), tokenStr)
 	if err != nil {
-		model.CreateResponseHttp(w, http.StatusBadRequest, model.ResponseHttp{Error: true, Message: err.Error()})
+		model.CreateResponseHttp(w, http.StatusBadRequest, model.ResponseHttp{Error: true, Message: fmt.Sprintf("%s. Err = %s", MessageFailedRedis, err)})
 		return
 	}
 
@@ -138,7 +143,7 @@ func (s *UserHandler) UserGet(w http.ResponseWriter, r *http.Request) {
 		userName, ok := userClaims["username"].(string)
 		userPass, ok2 := userClaims["password"].(string)
 		if !ok || !ok2 {
-			model.CreateResponseHttp(w, http.StatusUnauthorized, model.ResponseHttp{Error: true, Message: "Invalid jwt token"})
+			model.CreateResponseHttp(w, http.StatusUnauthorized, model.ResponseHttp{Error: true, Message: MessageFailedJWT})
 			return
 		}
 		user = model.User{Username: userName, Password: userPass}
@@ -162,7 +167,7 @@ func (s *UserHandler) UserUpdate(w http.ResponseWriter, r *http.Request) {
 	// get login info from redis
 	loginInfo, err := reddis.GetLoginInfoFromRedis(r.Context(), tokenStr)
 	if err != nil {
-		model.CreateResponseHttp(w, http.StatusBadRequest, model.ResponseHttp{Error: true, Message: err.Error()})
+		model.CreateResponseHttp(w, http.StatusBadRequest, model.ResponseHttp{Error: true, Message: fmt.Sprintf("%s. Err = %s", MessageFailedRedis, err)})
 		return
 	}
 
@@ -173,10 +178,10 @@ func (s *UserHandler) UserUpdate(w http.ResponseWriter, r *http.Request) {
 		userName, ok := userClaims["username"].(string)
 		userPass, ok2 := userClaims["password"].(string)
 		if !ok || !ok2 {
-			model.CreateResponseHttp(w, http.StatusUnauthorized, model.ResponseHttp{Error: true, Message: "Invalid token"})
+			model.CreateResponseHttp(w, http.StatusUnauthorized, model.ResponseHttp{Error: true, Message: MessageFailedJWT})
 			return
 		}
-		user := model.User{Username: userName, Password: userPass}
+		user = model.User{Username: userName, Password: userPass}
 		user, err = s.Service.GetUser(user)
 		if err != nil {
 			model.CreateResponseHttp(w, http.StatusBadRequest, model.ResponseHttp{Error: true, Message: "Invalid username or password"})
@@ -216,7 +221,7 @@ func (s *UserHandler) ProtectedHandler(w http.ResponseWriter, r *http.Request) {
 
 	_, err := middleware.VerifyToken(tokenString)
 	if err != nil {
-		model.CreateResponseHttp(w, http.StatusUnauthorized, model.ResponseHttp{Error: true, Message: "Invalid token"})
+		model.CreateResponseHttp(w, http.StatusUnauthorized, model.ResponseHttp{Error: true, Message: fmt.Sprintf("%s. err = %s", MessageFailedToken, err)})
 		return
 	}
 	fmt.Fprint(w, "Welcome to the the protected area")
@@ -231,7 +236,7 @@ func (s *UserHandler) UsersGetAll(w http.ResponseWriter, r *http.Request) {
 	// get login info from redis
 	_, err := reddis.GetLoginInfoFromRedis(r.Context(), tokenStr)
 	if err != nil {
-		model.CreateResponseHttp(w, http.StatusBadRequest, model.ResponseHttp{Error: true, Message: fmt.Sprintf("failed login session. err = %s", err.Error())})
+		model.CreateResponseHttp(w, http.StatusBadRequest, model.ResponseHttp{Error: true, Message: fmt.Sprintf("%s. Err = %s", MessageFailedRedis, err)})
 		return
 	}
 	// get user from db

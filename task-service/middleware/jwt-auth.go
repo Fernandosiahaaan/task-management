@@ -1,13 +1,12 @@
 package middleware
 
 import (
-	"context"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
 	"strings"
 	"task-management/task-service/internal/model"
+	"task-management/task-service/internal/reddis"
 
 	"github.com/dgrijalva/jwt-go"
 )
@@ -22,7 +21,7 @@ func verifyToken(tokenString string) (*jwt.Token, error) {
 		return nil, err
 	}
 	if !token.Valid {
-		return nil, fmt.Errorf("Invalid token")
+		return nil, fmt.Errorf("invalid token")
 	}
 	return token, nil
 }
@@ -43,25 +42,25 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		token, err := verifyToken(bearerToken[1])
+		var jwtToken string = bearerToken[1]
+		token, err := verifyToken(jwtToken)
 		if err != nil {
 			model.CreateResponseHttp(w, http.StatusUnauthorized, model.ResponseHttp{Error: true, Message: fmt.Sprintf("Failed token. err = %s", err)})
 			return
 		}
 
-		claims, ok := token.Claims.(jwt.MapClaims)
+		_, ok := token.Claims.(jwt.MapClaims)
 		if !ok {
-			w.WriteHeader(http.StatusUnauthorized)
-			json.NewEncoder(w).Encode(model.ResponseHttp{
-				Error:   true,
-				Message: "Fail claims token",
-			})
+			model.CreateResponseHttp(w, http.StatusUnauthorized, model.ResponseHttp{Error: true, Message: "Failed claims token"})
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), "jwtToken", bearerToken[1])
-		ctx2 := context.WithValue(ctx, "user", claims)
-		r = r.WithContext(ctx2)
+		_, err = reddis.GetLoginInfoFromRedis(r.Context(), jwtToken)
+		if err != nil {
+			model.CreateResponseHttp(w, http.StatusUnauthorized, model.ResponseHttp{Error: true, Message: fmt.Sprintf("Failed Login Session. Err = %s", err.Error())})
+			return
+		}
+
 		next.ServeHTTP(w, r)
 	})
 

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"task-management/task-service/internal/model"
 	"task-management/task-service/repository"
+	"time"
 )
 
 type TaskService struct {
@@ -17,7 +18,10 @@ func NewTaskService(repo *repository.TaskRepository) *TaskService {
 }
 
 func (s *TaskService) CreateNewTask(task *model.Task) (int64, error) {
-	fmt.Println("task = ", task)
+	if err := s.validateDueDate(task.DueDate); err != nil {
+		return 0, err
+	}
+
 	if task.Id <= 0 {
 		return s.Repo.CreateNewTask(task)
 	}
@@ -34,5 +38,10 @@ func (s *TaskService) CreateNewTask(task *model.Task) (int64, error) {
 	return s.Repo.CreateNewTask(task)
 }
 
-func (s *TaskService) validateUserUUID(uuid string) {
+func (s *TaskService) validateDueDate(dueDate time.Time) error {
+	now := time.Now()
+	if dueDate.After(now) || dueDate.Equal(now) {
+		return nil
+	}
+	return fmt.Errorf("due date time has passed.")
 }
