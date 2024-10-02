@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
 	"task-management/user-service/internal/model"
 	"task-management/user-service/repository"
 	"time"
@@ -20,6 +21,13 @@ func NewUserService(repo *repository.UserRepository) *UserService {
 }
 
 func (s *UserService) CreateNewUser(user model.User) (string, error) {
+	user.Password = strings.TrimSpace(user.Password)
+	hashPassword, err := s.HashPassword(user.Password)
+	if err != nil {
+		return "", fmt.Errorf("failed hash password. err = %s", err.Error())
+	}
+
+	user.Password = hashPassword
 	existUser, err := s.Repo.GetUser(user)
 	if err != nil && !errors.Is(sql.ErrNoRows, err) {
 		return "", err
@@ -37,8 +45,18 @@ func (s *UserService) CreateNewUser(user model.User) (string, error) {
 func (s *UserService) GetUser(user model.User) (model.User, error) {
 	existUser, err := s.Repo.GetUser(user)
 	if err != nil {
-		return existUser, err
+		if errors.Is(err, sql.ErrNoRows) {
+			return existUser, fmt.Errorf("username not found.")
+		}
+		return existUser, fmt.Errorf("error sql. err = %s", err.Error())
 	}
+
+	// Verifikasi apakah password cocok dengan hash
+	match := s.VerifyPassword(user.Password, existUser.Password)
+	if !match {
+		return existUser, fmt.Errorf("password not equal")
+	}
+
 	return existUser, nil
 }
 
@@ -63,7 +81,13 @@ func (s *UserService) GetAllUsers() ([]model.User, error) {
 }
 
 func (s *UserService) UpdateUser(user model.User) (model.User, error) {
-	user.UpdatedAt = time.Now()
+	user.Password = strings.TrimSpace(user.Password)
+	hashPassword, err := s.HashPassword(user.Password)
+	if err != nil {
+		return model.User{}, fmt.Errorf("failed hash password. err = %s", err.Error())
+	}
+	user.Password = hashPassword
+
 	id, err := s.Repo.UpdateUser(user)
 	if err != nil {
 		return model.User{}, err // Kembalikan model.User kosong jika ada error

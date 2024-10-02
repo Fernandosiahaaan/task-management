@@ -34,7 +34,9 @@ func (s *UserHandler) UserCreate(w http.ResponseWriter, r *http.Request) {
 		model.CreateResponseHttp(w, http.StatusBadRequest, model.ResponseHttp{Error: true, Message: "failed parse body request"})
 		return
 	}
-	user.Role = "user"
+	if user.Role == "" {
+		user.Role = "user"
+	}
 
 	userId, err := s.Service.CreateNewUser(user)
 	if err != nil {
@@ -51,6 +53,7 @@ func (s *UserHandler) UserLogin(w http.ResponseWriter, r *http.Request) {
 	var user model.User
 	if err := json.NewDecoder(r.Body).Decode(&user); err != nil {
 		model.CreateResponseHttp(w, http.StatusBadRequest, model.ResponseHttp{Error: true, Message: "failed body request"})
+		return
 	}
 
 	user, err := s.Service.GetUser(user)
@@ -58,6 +61,7 @@ func (s *UserHandler) UserLogin(w http.ResponseWriter, r *http.Request) {
 		tokenString, err := middleware.CreateToken(user.Username, user.Password)
 		if err != nil {
 			model.CreateResponseHttp(w, http.StatusInternalServerError, model.ResponseHttp{Error: true, Message: "failed created token"})
+			return
 		}
 
 		// send login info and user info to redis
@@ -65,11 +69,13 @@ func (s *UserHandler) UserLogin(w http.ResponseWriter, r *http.Request) {
 		err = reddis.SetLoginInfoToRedis(ctx, tokenString, model.LoginCacheData{Id: user.Id, Username: user.Username})
 		if err != nil {
 			model.CreateResponseHttp(w, http.StatusInternalServerError, model.ResponseHttp{Error: true, Message: err.Error()})
+			return
 		}
 
 		err = reddis.SetUserInfoToRedis(ctx, user)
 		if err != nil {
 			model.CreateResponseHttp(w, http.StatusInternalServerError, model.ResponseHttp{Error: true, Message: err.Error()})
+			return
 		}
 
 		dataResponse := model.LoginData{Token: tokenString}
@@ -77,7 +83,8 @@ func (s *UserHandler) UserLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	model.CreateResponseHttp(w, http.StatusInternalServerError, model.ResponseHttp{Error: true, Message: "no username found"})
+	model.CreateResponseHttp(w, http.StatusBadRequest, model.ResponseHttp{Error: true, Message: err.Error()})
+	return
 }
 
 func (s *UserHandler) UserLogout(w http.ResponseWriter, r *http.Request) {
@@ -218,8 +225,15 @@ func (s *UserHandler) ProtectedHandler(w http.ResponseWriter, r *http.Request) {
 
 func (s *UserHandler) UsersGetAll(w http.ResponseWriter, r *http.Request) {
 	// receive value form context midleware
+	tokenStr := r.Context().Value("jwtToken").(string)
 	userClaims := r.Context().Value("user").(jwt.MapClaims)
 
+	// get login info from redis
+	_, err := reddis.GetLoginInfoFromRedis(r.Context(), tokenStr)
+	if err != nil {
+		model.CreateResponseHttp(w, http.StatusBadRequest, model.ResponseHttp{Error: true, Message: fmt.Sprintf("failed login session. err = %s", err.Error())})
+		return
+	}
 	// get user from db
 	_, ok := userClaims["username"].(string)
 	_, ok2 := userClaims["password"].(string)
