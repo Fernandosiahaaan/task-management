@@ -28,7 +28,11 @@ func router(taskHandler *handler.TaskHandler) {
 	}).Methods("GET")
 
 	router.Use(middleware.AuthMiddleware)
-	router.HandleFunc("/task/create", taskHandler.TaskCreate).Methods(http.MethodPost)
+	router.HandleFunc("/tasks", taskHandler.TaskReadAll).Methods(http.MethodGet)
+	router.HandleFunc("/tasks", taskHandler.TaskCreate).Methods(http.MethodPost)
+	router.HandleFunc("/tasks/{taskId}", taskHandler.TaskRead).Methods(http.MethodGet)
+	router.HandleFunc("/tasks/{taskId}", taskHandler.TaskUpdate).Methods(http.MethodPut)
+	router.HandleFunc("/tasks/{taskId}", taskHandler.TaskDelete).Methods(http.MethodDelete)
 
 	portHttp := os.Getenv("PORT_HTTP")
 	if portHttp == "" {

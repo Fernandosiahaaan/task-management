@@ -1,6 +1,7 @@
 package middleware
 
 import (
+	"context"
 	"fmt"
 	"net/http"
 	"os"
@@ -61,6 +62,8 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
+		ctx := context.WithValue(r.Context(), "jwtToken", jwtToken)
+		r = r.WithContext(ctx)
 		next.ServeHTTP(w, r)
 	})
 

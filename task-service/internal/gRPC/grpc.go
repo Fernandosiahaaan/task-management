@@ -57,15 +57,15 @@ func (client *ClientGrpc) Stop() {
 	client.Cancel()
 }
 
-func (client *ClientGrpc) ValidateCreatedAndAssignedUUID(assignedTo string, createdBy string) error {
-	// Validate UUID Assigned & Created User
+func (client *ClientGrpc) ValidateUserUUID(assignedTo string, createdBy string) error {
+	// Validate UUID Assigned & Created User from user microservice
 	_, err := client.RequestUserInfo(createdBy, 1*time.Second)
 	if err != nil {
-		return fmt.Errorf("failed user id of task created by. err %s", err.Error())
+		return fmt.Errorf("failed uuid created_by/updated_by of task. err %s", err.Error())
 	}
 	_, err = client.RequestUserInfo(assignedTo, 1*time.Second)
 	if err != nil {
-		return fmt.Errorf("failed user id of task assigned to. err %s", err.Error())
+		return fmt.Errorf("failed uuid assigned_to of task. err %s", err.Error())
 	}
 	return nil
 }

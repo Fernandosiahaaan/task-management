@@ -5,6 +5,7 @@ CREATE TABLE IF NOT EXISTS tasks (
     due_date TIMESTAMP,
     assigned_to UUID NOT NULL,
     created_by UUID NOT NULL,
+    updated_by UUID NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
