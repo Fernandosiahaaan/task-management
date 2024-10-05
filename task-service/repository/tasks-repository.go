@@ -4,7 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
-	"task-management/task-service/internal/model"
+	"task-service/internal/model"
 )
 
 type TaskRepository struct {

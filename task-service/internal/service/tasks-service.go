@@ -4,8 +4,8 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"task-management/task-service/internal/model"
-	"task-management/task-service/repository"
+	"task-service/internal/model"
+	"task-service/repository"
 	"time"
 )
 

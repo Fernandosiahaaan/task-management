@@ -10,21 +10,22 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	grpc "task-management/user-service/internal/gRPC"
-	"task-management/user-service/internal/handler"
-	"task-management/user-service/internal/reddis"
-	"task-management/user-service/internal/service"
-	"task-management/user-service/middleware"
-	"task-management/user-service/repository"
+	grpc "user-service/internal/gRPC"
+	"user-service/internal/handler"
+	"user-service/internal/reddis"
+	"user-service/internal/service"
+	"user-service/middleware"
+	"user-service/repository"
 
 	"github.com/gorilla/handlers"
-	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 	_ "github.com/lib/pq"
+	muxtrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/gorilla/mux"
 )
 
 func router(userHandler *handler.UserHandler) {
-	router := mux.NewRouter()
+	router := muxtrace.NewRouter()
+	// router := mux.NewRouter()
 	router.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 	}).Methods("GET")

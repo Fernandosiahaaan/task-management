@@ -18,7 +18,7 @@ The development utilizes several tech stacks, such as:
 
 ## 🖊 Documentation
 
-- Documentation : [Tech Documentaion](https://www.notion.so/Collaborative-Task-Management-Backend-1107b515908e80a997c3ee75907ffb2b?pvs=4)
+- Documentation : [Tech Documentaion](https://maroon-crabapple-bb5.notion.site/Collaborative-Task-Management-Backend-1107b515908e80a997c3ee75907ffb2b?pvs=4)
 
 ## 🖊 PreRequire
 

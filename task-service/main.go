@@ -8,12 +8,13 @@ import (
 	"log"
 	"net/http"
 	"os"
-	grpc "task-management/task-service/internal/gRPC"
-	"task-management/task-service/internal/handler"
-	"task-management/task-service/internal/reddis"
-	services "task-management/task-service/internal/service"
-	"task-management/task-service/middleware"
-	"task-management/task-service/repository"
+	"task-service/internal/datadog"
+	grpc "task-service/internal/gRPC"
+	"task-service/internal/handler"
+	"task-service/internal/reddis"
+	services "task-service/internal/service"
+	"task-service/middleware"
+	"task-service/repository"
 
 	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
@@ -76,6 +77,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("Could not to redis server. err = %v", err)
 	}
+	fmt.Println("🔥 Init Datadog...")
+	datadog.Init()
+
 	fmt.Println("🔥 Init Redis...")
 	defer reddis.RedisClient.Close()
 

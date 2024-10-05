@@ -5,9 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"task-management/user-service/internal/model"
-	"task-management/user-service/repository"
 	"time"
+	"user-service/internal/model"
+	"user-service/repository"
 
 	"github.com/google/uuid"
 )

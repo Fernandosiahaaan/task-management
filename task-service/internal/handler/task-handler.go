@@ -6,10 +6,10 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	grpc "task-management/task-service/internal/gRPC"
-	"task-management/task-service/internal/model"
-	"task-management/task-service/internal/reddis"
-	"task-management/task-service/internal/service"
+	grpc "task-service/internal/gRPC"
+	"task-service/internal/model"
+	"task-service/internal/reddis"
+	"task-service/internal/service"
 
 	"github.com/gorilla/mux"
 )

@@ -5,7 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"task-management/task-service/internal/model"
+	"os"
+	"task-service/internal/model"
 
 	"github.com/redis/go-redis/v9"
 )
@@ -16,10 +17,11 @@ var (
 
 func NewReddisClient(ctx context.Context) (*redis.Client, error) {
 	// Connect to Redis
+	host := fmt.Sprintf("localhost:%s", os.Getenv("REDIS_PORT"))
 	client := redis.NewClient(&redis.Options{
-		Addr:     "localhost:6379", // Replace with your Redis server address
-		Password: "",               // No password for local development
-		DB:       0,                // Default DB
+		Addr:     host, // Replace with your Redis server address
+		Password: "",   // No password for local development
+		DB:       0,    // Default DB
 	})
 
 	// Ping the Redis server to check the connection

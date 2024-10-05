@@ -6,11 +6,11 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	grpc "task-management/user-service/internal/gRPC"
-	"task-management/user-service/internal/model"
-	"task-management/user-service/internal/reddis"
-	"task-management/user-service/internal/service"
-	"task-management/user-service/middleware"
+	grpc "user-service/internal/gRPC"
+	"user-service/internal/model"
+	"user-service/internal/reddis"
+	"user-service/internal/service"
+	"user-service/middleware"
 
 	"github.com/dgrijalva/jwt-go"
 )

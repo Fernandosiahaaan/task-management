@@ -3,7 +3,7 @@ package repository
 import (
 	"context"
 	"database/sql"
-	"task-management/user-service/internal/model"
+	"user-service/internal/model"
 )
 
 type UserRepository struct {

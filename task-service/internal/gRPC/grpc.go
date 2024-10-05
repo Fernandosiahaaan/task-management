@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	pb "task-management/task-service/internal/gRPC/user"
+	pb "task-service/internal/gRPC/user"
 
 	"google.golang.org/grpc"
 )

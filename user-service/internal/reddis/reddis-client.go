@@ -5,7 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"task-management/user-service/internal/model"
+	"user-service/internal/model"
 
 	"github.com/redis/go-redis/v9"
 )

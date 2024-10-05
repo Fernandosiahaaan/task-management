@@ -7,8 +7,8 @@ import (
 	"net/http"
 	"os"
 	"strings"
-	"task-management/user-service/internal/model"
 	"time"
+	"user-service/internal/model"
 
 	"github.com/dgrijalva/jwt-go"
 )

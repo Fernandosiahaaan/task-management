@@ -6,10 +6,10 @@ import (
 	"log"
 	"net"
 
-	pb "task-management/user-service/internal/gRPC/user"
-	"task-management/user-service/internal/model"
-	"task-management/user-service/internal/reddis"
-	"task-management/user-service/internal/service"
+	pb "user-service/internal/gRPC/user"
+	"user-service/internal/model"
+	"user-service/internal/reddis"
+	"user-service/internal/service"
 
 	"google.golang.org/grpc"
 )
