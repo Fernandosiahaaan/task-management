@@ -7,12 +7,13 @@ import (
 	"net/http"
 	"strings"
 	grpc "user-service/infrastructure/gRPC"
-	"user-service/internal/model"
 	"user-service/infrastructure/reddis"
+	"user-service/internal/model"
 	"user-service/internal/service"
 	"user-service/middleware"
 
 	"github.com/dgrijalva/jwt-go"
+	"github.com/gorilla/mux"
 )
 
 type UserHandler struct {
@@ -22,9 +23,10 @@ type UserHandler struct {
 }
 
 const (
-	MessageFailedToken string = "Failed Token"
-	MessageFailedRedis string = "Failed Login Session"
-	MessageFailedJWT   string = "Invalid JWT Token"
+	MessageFailedToken     string = "Failed Token"
+	MessageFailedRedis     string = "Failed Login Session"
+	MessageFailedJWT       string = "Invalid JWT Token"
+	MessageFailedReqUserId string = "Invalid User ID uri"
 )
 
 func NewUserHandler(service *service.UserService, ctx context.Context, serverGrpc grpc.ServerGrpc) *UserHandler {
@@ -136,6 +138,13 @@ func (s *UserHandler) UserGet(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// validate uri
+	vars := mux.Vars(r)
+	if loginInfo.Id != vars["user_id"] {
+		model.CreateResponseHttp(w, http.StatusBadRequest, model.ResponseHttp{Error: true, Message: MessageFailedReqUserId})
+		return
+	}
+
 	// get user info from db
 	user, err := reddis.GetUserInfoFromRedis(r.Context(), loginInfo.Id)
 	if err != nil {
@@ -168,6 +177,14 @@ func (s *UserHandler) UserUpdate(w http.ResponseWriter, r *http.Request) {
 	loginInfo, err := reddis.GetLoginInfoFromRedis(r.Context(), tokenStr)
 	if err != nil {
 		model.CreateResponseHttp(w, http.StatusBadRequest, model.ResponseHttp{Error: true, Message: fmt.Sprintf("%s. Err = %s", MessageFailedRedis, err)})
+		return
+	}
+
+	// validate uri
+	vars := mux.Vars(r)
+	fmt.Printf("user id = %s; login id = %s", vars["taskId"], loginInfo.Id)
+	if loginInfo.Id != vars["user_id"] {
+		model.CreateResponseHttp(w, http.StatusBadRequest, model.ResponseHttp{Error: true, Message: MessageFailedReqUserId})
 		return
 	}
 

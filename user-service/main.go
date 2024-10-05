@@ -30,12 +30,12 @@ func router(userHandler *handler.UserHandler) {
 		json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 	}).Methods("GET")
 
-	router.HandleFunc("/user/register", userHandler.UserCreate).Methods(http.MethodPost)
-	router.HandleFunc("/user/login", userHandler.UserLogin).Methods(http.MethodPost)
+	router.HandleFunc("/user", userHandler.UserCreate).Methods(http.MethodPost)
+	router.HandleFunc("/login", userHandler.UserLogin).Methods(http.MethodPost)
 	router.HandleFunc("/user/logout", userHandler.UserLogout).Methods(http.MethodPost)
-	router.Handle("/user/aboutme", middleware.AuthMiddleware(http.HandlerFunc(userHandler.UserGet))).Methods(http.MethodGet)
-	router.Handle("/users", middleware.AuthMiddleware(http.HandlerFunc(userHandler.UsersGetAll))).Methods(http.MethodGet)
-	router.Handle("/user/update", middleware.AuthMiddleware(http.HandlerFunc(userHandler.UserUpdate))).Methods(http.MethodPut)
+	router.Handle("/user", middleware.AuthMiddleware(http.HandlerFunc(userHandler.UsersGetAll))).Methods(http.MethodGet)
+	router.Handle("/user/{user_id}", middleware.AuthMiddleware(http.HandlerFunc(userHandler.UserGet))).Methods(http.MethodGet)
+	router.Handle("/user/{user_id}", middleware.AuthMiddleware(http.HandlerFunc(userHandler.UserUpdate))).Methods(http.MethodPut)
 	router.HandleFunc("/user/protected", userHandler.ProtectedHandler).Methods(http.MethodGet)
 
 	portHttp := os.Getenv("PORT_HTTP")
