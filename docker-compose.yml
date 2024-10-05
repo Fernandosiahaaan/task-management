@@ -23,7 +23,7 @@ services:
     container_name: rabbitmq
     platform: linux/amd64
     ports:
-      - "5672:5672"
+      - "5772:5672"
       - "15672:15672"
     environment:
       RABBITMQ_DEFAULT_USER: user

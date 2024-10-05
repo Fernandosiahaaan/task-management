@@ -8,10 +8,9 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"task-service/internal/datadog"
-	grpc "task-service/internal/gRPC"
+	grpc "task-service/infrastructure/gRPC"
+	"task-service/infrastructure/reddis"
 	"task-service/internal/handler"
-	"task-service/internal/reddis"
 	services "task-service/internal/service"
 	"task-service/middleware"
 	"task-service/repository"
@@ -77,8 +76,8 @@ func main() {
 	if err != nil {
 		log.Fatalf("Could not to redis server. err = %v", err)
 	}
-	fmt.Println("🔥 Init Datadog...")
-	datadog.Init()
+	// fmt.Println("🔥 Init Datadog...")
+	// datadog.Init()
 
 	fmt.Println("🔥 Init Redis...")
 	defer reddis.RedisClient.Close()

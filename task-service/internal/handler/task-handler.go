@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
-	grpc "task-service/internal/gRPC"
+	grpc "task-service/infrastructure/gRPC"
+	"task-service/infrastructure/reddis"
 	"task-service/internal/model"
-	"task-service/internal/reddis"
 	"task-service/internal/service"
 
 	"github.com/gorilla/mux"

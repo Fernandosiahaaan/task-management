@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"os"
 	"strings"
+	"task-service/infrastructure/reddis"
 	"task-service/internal/model"
-	"task-service/internal/reddis"
 
 	"github.com/dgrijalva/jwt-go"
 )

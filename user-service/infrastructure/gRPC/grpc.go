@@ -6,9 +6,9 @@ import (
 	"log"
 	"net"
 
-	pb "user-service/internal/gRPC/user"
+	pb "user-service/infrastructure/gRPC/user"
 	"user-service/internal/model"
-	"user-service/internal/reddis"
+	"user-service/infrastructure/reddis"
 	"user-service/internal/service"
 
 	"google.golang.org/grpc"

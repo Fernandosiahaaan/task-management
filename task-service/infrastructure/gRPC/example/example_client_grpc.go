@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
-	client "task-service/internal/gRPC"
+	client "task-service/infrastructure/gRPC"
 	"time"
 )
 

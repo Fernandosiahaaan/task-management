@@ -2,3 +2,4 @@
 /user-service/.env
 .env
 /vendor
+/notification-service/vendor

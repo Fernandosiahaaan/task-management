@@ -6,9 +6,9 @@ import (
 	"fmt"
 	"net/http"
 	"strings"
-	grpc "user-service/internal/gRPC"
+	grpc "user-service/infrastructure/gRPC"
 	"user-service/internal/model"
-	"user-service/internal/reddis"
+	"user-service/infrastructure/reddis"
 	"user-service/internal/service"
 	"user-service/middleware"
 

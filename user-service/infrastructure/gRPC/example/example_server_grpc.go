@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"log"
-	server "user-service/internal/gRPC"
+	server "user-service/infrastructure/gRPC"
 )
 
 func main() {
