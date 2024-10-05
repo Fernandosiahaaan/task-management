@@ -107,15 +107,15 @@ func (r *rabbitMq) ReceiveMessage() {
 			var subject string
 			switch msg.RoutingKey {
 			case ACTION_TASK_CREATE:
-				subject = "Task Created"
+				subject = "[task-service] Task Created"
 			case ACTION_TASK_UPDATE:
-				subject = "Task Updated"
+				subject = "[task-service] Task Updated"
 			case ACTION_TASK_READ:
-				subject = "Task Read"
+				subject = "[task-service] Task Read"
 			case ACTION_TASK_DELETE:
-				subject = "Task Deleted"
+				subject = "[task-service] Task Deleted"
 			default:
-				subject = "Task Notification"
+				subject = "[task-service] Task Notification"
 			}
 			fmt.Printf("Received subject: %s; Message: %s\n", subject, msg.Body)
 			r.Email.SendEmail(subject, string(msg.Body))

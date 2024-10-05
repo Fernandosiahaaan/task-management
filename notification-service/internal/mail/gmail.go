@@ -20,9 +20,10 @@ func Init(email, password string) (*Mail, error) {
 
 func (m *Mail) SendEmail(subject, body string) {
 	to := []string{"example@gmail.com"}
+	passwordApp := "xkdv dgnf msrl psll"
 
 	// Set up authentication information
-	auth := smtp.PlainAuth("", m.Email, m.Password, "smtp.gmail.com")
+	auth := smtp.PlainAuth("", m.Email, passwordApp, "smtp.gmail.com")
 
 	// Pesan email
 	msg := []byte(fmt.Sprintf("Subject: %s\r\n\r\n%s", subject, body))
@@ -30,8 +31,8 @@ func (m *Mail) SendEmail(subject, body string) {
 	// Mengirim email via Gmail SMTP
 	err := smtp.SendMail("smtp.gmail.com:587", auth, m.Email, to, msg)
 	if err != nil {
-		fmt.Printf("Failed to send email: %s", err)
+		fmt.Printf("❌ Failed to send email: %s", err)
 	} else {
-		fmt.Printf("Email sent successfully with subject: %s", subject)
+		fmt.Printf("✔️ Email sent successfully with subject: %s", subject)
 	}
 }
