@@ -27,7 +27,7 @@ func ConnectToServerGrpc(param ParamClientGrpc) (client ClientGrpc, err error) {
 	client.Ctx, client.Cancel = context.WithCancel(param.Ctx)
 
 	client.Hostname = fmt.Sprintf("localhost:%s", param.Port)
-	client.Conn, err = grpc.Dial(client.Hostname, grpc.WithInsecure(), grpc.WithBlock())
+	client.Conn, err = grpc.Dial(client.Hostname, grpc.WithInsecure(), grpc.WithIdleTimeout(10*time.Second))
 	if err != nil {
 		return client, fmt.Errorf("Failed connected client grpc. err = %v", err)
 	}

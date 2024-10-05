@@ -3,3 +3,4 @@
 .env
 /vendor
 /notification-service/vendor
+/notification-service/.env

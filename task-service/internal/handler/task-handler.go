@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 	grpc "task-service/infrastructure/gRPC"
+	"task-service/infrastructure/rabbitmq"
 	"task-service/infrastructure/reddis"
 	"task-service/internal/model"
 	"task-service/internal/service"
@@ -18,10 +19,16 @@ type TaskHandler struct {
 	Service    *service.TaskService
 	Ctx        context.Context
 	ClientGrpc grpc.ClientGrpc
+	RabbitMq   *rabbitmq.RabbitMq
 }
 
-func NewTaskHandler(service *service.TaskService, ctx context.Context, clientGrpc grpc.ClientGrpc) *TaskHandler {
-	return &TaskHandler{Service: service, Ctx: ctx, ClientGrpc: clientGrpc}
+func NewTaskHandler(service *service.TaskService, ctx context.Context, clientGrpc grpc.ClientGrpc, rabbitmq *rabbitmq.RabbitMq) *TaskHandler {
+	return &TaskHandler{
+		Service:    service,
+		Ctx:        ctx,
+		ClientGrpc: clientGrpc,
+		RabbitMq:   rabbitmq,
+	}
 }
 
 func (s *TaskHandler) TaskCreate(w http.ResponseWriter, r *http.Request) {
@@ -54,7 +61,10 @@ func (s *TaskHandler) TaskCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	task.Id = taskId
-	model.CreateResponseHttp(w, http.StatusCreated, model.ResponseHttp{Error: false, Message: "Task created", Data: task})
+	msg := fmt.Sprintf("successfully created task %d", task.Id)
+
+	model.CreateResponseHttp(w, http.StatusCreated, model.ResponseHttp{Error: false, Message: msg, Data: task})
+	s.RabbitMq.SendMessage(rabbitmq.EXCHANGE_NAME_TaskService, rabbitmq.ACTION_TASK_CREATE, msg)
 }
 
 func (s *TaskHandler) TaskUpdate(w http.ResponseWriter, r *http.Request) {

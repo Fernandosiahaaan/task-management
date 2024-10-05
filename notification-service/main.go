@@ -3,7 +3,9 @@ package main
 import (
 	"fmt"
 	"log"
-	rabbitmq "notification-service/internal/rabbitmq"
+	rabbitmq "notification-service/infrastructure/rabbitmq"
+	"notification-service/internal/mail"
+	"os"
 
 	"github.com/joho/godotenv"
 )
@@ -15,7 +17,10 @@ func main() {
 		log.Fatalf("Error loading .env file")
 	}
 
-	rabbitmq, err := rabbitmq.Init()
+	mails, err := mail.Init(os.Getenv("MAIL_USERNAME"), os.Getenv("MAIL_PASSWORD"))
+	fmt.Println("🔥 Init SMTP...")
+
+	rabbitmq, err := rabbitmq.Init(mails)
 	if err != nil {
 		log.Fatalf("failed init rabbitmq, err = %v", err)
 	}

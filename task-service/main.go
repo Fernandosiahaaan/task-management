@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	grpc "task-service/infrastructure/gRPC"
+	"task-service/infrastructure/rabbitmq"
 	"task-service/infrastructure/reddis"
 	"task-service/internal/handler"
 	services "task-service/internal/service"
@@ -82,6 +83,13 @@ func main() {
 	fmt.Println("🔥 Init Redis...")
 	defer reddis.RedisClient.Close()
 
+	rabbitmq, err := rabbitmq.Init()
+	if err != nil {
+		log.Fatalf("failed init rabbitmq, err = %v", err)
+	}
+	defer rabbitmq.Conn.Close()
+	fmt.Println("🔥 Init Redis...")
+
 	fmt.Println("🔥 Init Repository...")
 	repo := repository.NewTaskRepository(db, ctx)
 
@@ -99,7 +107,7 @@ func main() {
 	fmt.Println("🔥 Init gRPC Client...")
 
 	fmt.Println("🔥 Init Handler...")
-	taskHandler := handler.NewTaskHandler(taskService, ctx, clientGrpc)
+	taskHandler := handler.NewTaskHandler(taskService, ctx, clientGrpc, rabbitmq)
 
 	router(taskHandler)
 
