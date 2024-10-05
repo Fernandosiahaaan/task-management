@@ -93,5 +93,6 @@ func (s *UserService) UpdateUser(user model.User) (model.User, error) {
 		return model.User{}, err // Kembalikan model.User kosong jika ada error
 	}
 	user.Id = id
+	user.UpdatedAt = time.Now()
 	return user, nil
 }

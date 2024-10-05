@@ -43,7 +43,7 @@ func (r *TaskRepository) CreateNewTask(task *model.Task) (int64, error) {
 func (r *TaskRepository) GetTaskById(taskId *int64) (*model.Task, error) {
 	var returntask model.Task
 	query := `
-	SELECT id, title, description, due_date, assigned_to, created_by, updated_by
+	SELECT id, title, description, due_date, assigned_to, created_by, updated_by, created_at, updated_at
 	FROM tasks
 	WHERE id=$1 
 	`
@@ -56,6 +56,8 @@ func (r *TaskRepository) GetTaskById(taskId *int64) (*model.Task, error) {
 		&returntask.AssignedTo,
 		&returntask.CreatedBy,
 		&returntask.UpdatedBy,
+		&returntask.CreatedAt,
+		&returntask.UpdatedAt,
 	)
 	if err != nil {
 		return nil, err
@@ -64,7 +66,7 @@ func (r *TaskRepository) GetTaskById(taskId *int64) (*model.Task, error) {
 }
 func (r *TaskRepository) GetAllTask() ([]*model.Task, error) {
 	query := `
-	SELECT id, title, description, due_date, assigned_to, created_by, updated_by
+	SELECT id, title, description, due_date, assigned_to, created_by, updated_by, created_at, updated_at
 	FROM tasks
 	`
 	// Execute query
@@ -85,6 +87,8 @@ func (r *TaskRepository) GetAllTask() ([]*model.Task, error) {
 			&task.AssignedTo,
 			&task.CreatedBy,
 			&task.UpdatedBy,
+			&task.CreatedAt,
+			&task.UpdatedAt,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("failed to get all tasks from db: %s", err.Error())

@@ -53,6 +53,8 @@ func (s *TaskService) CreateNewTask(task *model.Task) (int64, error) {
 		return 0, errors.New("task already created")
 	}
 	task.UpdatedBy = task.CreatedBy
+	task.CreatedAt = time.Now()
+	task.UpdatedAt = time.Now()
 
 	return s.Repo.CreateNewTask(task)
 }
@@ -73,6 +75,7 @@ func (s *TaskService) UpdateTask(task *model.Task) (*int64, error) {
 	if existTask == nil {
 		return nil, errors.New("task not found")
 	}
+	task.UpdatedAt = time.Now()
 	return s.Repo.UpdateTask(task)
 }
 

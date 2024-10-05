@@ -43,7 +43,8 @@ func (r *UserRepository) UpdateUser(user model.User) (string, error) {
 
 func (r *UserRepository) GetUser(user model.User) (model.User, error) {
 	query := `
-	SELECT id, username, password, email, role FROM users 
+	SELECT id, username, password, email, role, created_at, updated_at 
+	FROM users 
 	WHERE username=$1
 	`
 	var existUser model.User
@@ -53,6 +54,8 @@ func (r *UserRepository) GetUser(user model.User) (model.User, error) {
 		&existUser.Password,
 		&existUser.Email,
 		&existUser.Role,
+		&existUser.CreatedAt,
+		&existUser.UpdatedAt,
 	)
 	if err != nil {
 		return existUser, err
@@ -62,7 +65,8 @@ func (r *UserRepository) GetUser(user model.User) (model.User, error) {
 
 func (r *UserRepository) GetUserById(user model.User) (model.User, error) {
 	query := `
-	SELECT id, username, password, email, role FROM users 
+	SELECT id, username, password, email, role, created_at, updated_at
+	FROM users 
 	WHERE id=$1
 	`
 	var existUser model.User
@@ -72,6 +76,8 @@ func (r *UserRepository) GetUserById(user model.User) (model.User, error) {
 		&existUser.Password,
 		&existUser.Email,
 		&existUser.Role,
+		&existUser.CreatedAt,
+		&existUser.UpdatedAt,
 	)
 	if err != nil {
 		return existUser, err
@@ -81,7 +87,7 @@ func (r *UserRepository) GetUserById(user model.User) (model.User, error) {
 
 func (r *UserRepository) GetAllUsers() ([]model.User, error) {
 	query := `
-	SELECT id, username, role 
+	SELECT id, username, password, email, role, created_at, updated_at
 	FROM users
 	`
 	rows, err := r.DB.QueryContext(r.Ctx, query)
@@ -93,7 +99,15 @@ func (r *UserRepository) GetAllUsers() ([]model.User, error) {
 	var users []model.User
 	for rows.Next() {
 		var user model.User
-		err := rows.Scan(&user.Id, &user.Username, &user.Role)
+		err := rows.Scan(
+			&user.Id,
+			&user.Username,
+			&user.Password,
+			&user.Email,
+			&user.Role,
+			&user.CreatedAt,
+			&user.UpdatedAt,
+		)
 		if err != nil {
 			return nil, err
 		}
