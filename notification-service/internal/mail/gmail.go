@@ -20,10 +20,9 @@ func Init(email, password string) (*Mail, error) {
 
 func (m *Mail) SendEmail(subject, body string) {
 	to := []string{"example@gmail.com"}
-	passwordApp := "xkdv dgnf msrl psll"
 
 	// Set up authentication information
-	auth := smtp.PlainAuth("", m.Email, passwordApp, "smtp.gmail.com")
+	auth := smtp.PlainAuth("", m.Email, m.Password, "smtp.gmail.com")
 
 	// Pesan email
 	msg := []byte(fmt.Sprintf("Subject: %s\r\n\r\n%s", subject, body))

@@ -17,9 +17,8 @@ func main() {
 		log.Fatalf("Error loading .env file")
 	}
 
-	mails, err := mail.Init(os.Getenv("MAIL_USERNAME"), os.Getenv("MAIL_PASSWORD"))
+	mails, err := mail.Init(os.Getenv("MAIL_USERNAME"), os.Getenv("APP_GMAIL_KEY"))
 	fmt.Println("🔥 Init SMTP...")
-
 	rabbitmq, err := rabbitmq.Init(mails)
 	if err != nil {
 		log.Fatalf("failed init rabbitmq, err = %v", err)
