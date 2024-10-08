@@ -12,9 +12,21 @@ import (
 	"github.com/dgrijalva/jwt-go"
 )
 
-func verifyToken(tokenString string) (*jwt.Token, error) {
+type middleware struct {
+	Redis *reddis.RedisCln
+	Ctx   context.Context
+}
+
+func NewMidleware(ctx context.Context, redis *reddis.RedisCln) *middleware {
+	return &middleware{
+		Ctx:   ctx,
+		Redis: redis,
+	}
+
+}
+
+func (m *middleware) verifyToken(tokenString string) (*jwt.Token, error) {
 	secretKey := []byte(os.Getenv("SECRET_KEY"))
-	fmt.Println("secret key = ", secretKey)
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		return secretKey, nil
 	})
@@ -27,7 +39,7 @@ func verifyToken(tokenString string) (*jwt.Token, error) {
 	return token, nil
 }
 
-func AuthMiddleware(next http.Handler) http.Handler {
+func (m *middleware) AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
@@ -44,7 +56,7 @@ func AuthMiddleware(next http.Handler) http.Handler {
 		}
 
 		var jwtToken string = bearerToken[1]
-		token, err := verifyToken(jwtToken)
+		token, err := m.verifyToken(jwtToken)
 		if err != nil {
 			model.CreateResponseHttp(w, http.StatusUnauthorized, model.ResponseHttp{Error: true, Message: fmt.Sprintf("Failed token. err = %s", err)})
 			return
@@ -56,7 +68,7 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		_, err = reddis.GetLoginInfoFromRedis(r.Context(), jwtToken)
+		_, err = m.Redis.GetLoginInfoFromRedis(jwtToken)
 		if err != nil {
 			model.CreateResponseHttp(w, http.StatusUnauthorized, model.ResponseHttp{Error: true, Message: fmt.Sprintf("Failed Login Session. Err = %s", err.Error())})
 			return

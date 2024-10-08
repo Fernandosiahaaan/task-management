@@ -4,20 +4,30 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"task-service/infrastructure/reddis"
 	"task-service/internal/model"
 	"task-service/repository"
 	"time"
 )
 
 type TaskService struct {
-	Repo *repository.TaskRepository
+	Repo  *repository.TaskRepository
+	Redis *reddis.RedisCln
 }
 
-func NewTaskService(repo *repository.TaskRepository) *TaskService {
-	return &TaskService{Repo: repo}
+func NewTaskService(repo *repository.TaskRepository, redis *reddis.RedisCln) *TaskService {
+	return &TaskService{
+		Repo:  repo,
+		Redis: redis,
+	}
 }
 
 func (s *TaskService) GetTask(id *int64) (*model.Task, error) {
+	taskInfo, err := s.Redis.GetTaskInfoFromRedis(*id)
+	if (err == nil) && (taskInfo != nil) {
+		return taskInfo, nil
+	}
+
 	existTask, err := s.Repo.GetTaskById(id)
 	if err != nil {
 		if errors.Is(sql.ErrNoRows, err) {
@@ -56,7 +66,14 @@ func (s *TaskService) CreateNewTask(task *model.Task) (int64, error) {
 	task.CreatedAt = time.Now()
 	task.UpdatedAt = time.Now()
 
-	return s.Repo.CreateNewTask(task)
+	task.Id, err = s.Repo.CreateNewTask(task)
+	if err != nil {
+		return 0, fmt.Errorf("failed save task info to db. err %v", err)
+	}
+	if err = s.Redis.SetTaskInfoToRedis(task); err != nil {
+		return 0, fmt.Errorf("failed save task info to redis caching. err %v", err)
+	}
+	return task.Id, nil
 }
 
 func (s *TaskService) UpdateTask(task *model.Task) (*int64, error) {
@@ -76,7 +93,16 @@ func (s *TaskService) UpdateTask(task *model.Task) (*int64, error) {
 		return nil, errors.New("task not found")
 	}
 	task.UpdatedAt = time.Now()
-	return s.Repo.UpdateTask(task)
+
+	id, err := s.Repo.UpdateTask(task)
+	if err != nil {
+		return nil, fmt.Errorf("failed update task info to db. err = %v", err)
+	}
+	task.Id = *id
+	if err = s.Redis.SetTaskInfoToRedis(task); err != nil {
+		return nil, fmt.Errorf("failed update task info in redis caching. err = %v", err)
+	}
+	return id, nil
 }
 
 func (s *TaskService) DeleteTask(id *int64) error {

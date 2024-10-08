@@ -10,6 +10,11 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+const (
+	PrefixKeyLoginInfo = "user-service:jwt"
+	PrefixKeyUserInfo  = "user-service:user"
+)
+
 var (
 	RedisClient *redis.Client
 )
@@ -33,7 +38,8 @@ func NewReddisClient(ctx context.Context) (*redis.Client, error) {
 }
 
 func GetLoginInfoFromRedis(ctx context.Context, jwtToken string) (loginInfo model.LoginCacheData, err error) {
-	loginJson, err := RedisClient.Get(ctx, jwtToken).Result()
+	keyLoginInfo := fmt.Sprintf("%s:%s", PrefixKeyLoginInfo, jwtToken)
+	loginJson, err := RedisClient.Get(ctx, keyLoginInfo).Result()
 	if err != nil {
 		return loginInfo, fmt.Errorf("failed get login info from redis")
 	}
@@ -45,7 +51,8 @@ func GetLoginInfoFromRedis(ctx context.Context, jwtToken string) (loginInfo mode
 }
 
 func GetUserInfoFromRedis(ctx context.Context, userId string) (user model.User, err error) {
-	userJson, err := RedisClient.Get(ctx, userId).Result()
+	userInfo := fmt.Sprintf("%s:%s", PrefixKeyUserInfo, userId)
+	userJson, err := RedisClient.Get(ctx, userInfo).Result()
 	if err != nil {
 		return user, fmt.Errorf("failed get user info from redis")
 	}
@@ -63,7 +70,8 @@ func SetUserInfoToRedis(ctx context.Context, user model.User) error {
 	}
 
 	// send user info to reddis data
-	err = RedisClient.Set(ctx, user.Id, userJson, model.UserSessionTime).Err() // Set waktu kadaluarsa 30 menit
+	keyUserInfo := fmt.Sprintf("%s:%s", PrefixKeyUserInfo, user.Id)
+	err = RedisClient.Set(ctx, keyUserInfo, userJson, model.UserSessionTime).Err() // Set waktu kadaluarsa 30 menit
 	if err != nil {
 		return fmt.Errorf("error saving login info to redis. err = %s", err.Error())
 	}
@@ -77,7 +85,8 @@ func SetLoginInfoToRedis(ctx context.Context, tokenKey string, loginInfo model.L
 	}
 
 	// send login info to reddis data
-	err = RedisClient.Set(ctx, tokenKey, loginJson, model.UserSessionTime).Err() // Set waktu kadaluarsa 30 menit
+	keyLoginInfo := fmt.Sprintf("%s:%s", PrefixKeyLoginInfo, tokenKey)
+	err = RedisClient.Set(ctx, keyLoginInfo, loginJson, model.UserSessionTime).Err() // Set waktu kadaluarsa 30 menit
 	if err != nil {
 		return fmt.Errorf("error saving login info to redis. err = %s", err.Error())
 	}

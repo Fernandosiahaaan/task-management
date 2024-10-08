@@ -20,14 +20,16 @@ type TaskHandler struct {
 	Ctx        context.Context
 	ClientGrpc grpc.ClientGrpc
 	RabbitMq   *rabbitmq.RabbitMq
+	Redis      *reddis.RedisCln
 }
 
-func NewTaskHandler(service *service.TaskService, ctx context.Context, clientGrpc grpc.ClientGrpc, rabbitmq *rabbitmq.RabbitMq) *TaskHandler {
+func NewTaskHandler(service *service.TaskService, ctx context.Context, clientGrpc grpc.ClientGrpc, rabbitmq *rabbitmq.RabbitMq, redis *reddis.RedisCln) *TaskHandler {
 	return &TaskHandler{
 		Service:    service,
 		Ctx:        ctx,
 		ClientGrpc: clientGrpc,
 		RabbitMq:   rabbitmq,
+		Redis:      redis,
 	}
 }
 
@@ -163,7 +165,7 @@ func (s *TaskHandler) TaskDelete(w http.ResponseWriter, r *http.Request) {
 
 // compare user login from jwt with user created/ user updated when update/create task
 func (s *TaskHandler) compareUser(jwtToken string, userId string) error {
-	loginInfo, err := reddis.GetLoginInfoFromRedis(s.Ctx, jwtToken)
+	loginInfo, err := s.Redis.GetLoginInfoFromRedis(jwtToken)
 	if err != nil {
 		return fmt.Errorf("failed validation user. err = %s", err.Error())
 	}

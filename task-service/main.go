@@ -28,7 +28,9 @@ func router(taskHandler *handler.TaskHandler) {
 		json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 	}).Methods("GET")
 
-	router.Use(middleware.AuthMiddleware)
+	//
+	midleware := middleware.NewMidleware(taskHandler.Ctx, taskHandler.Redis)
+	router.Use(midleware.AuthMiddleware)
 	router.HandleFunc("/tasks", taskHandler.TaskReadAll).Methods(http.MethodGet)
 	router.HandleFunc("/tasks", taskHandler.TaskCreate).Methods(http.MethodPost)
 	router.HandleFunc("/tasks/{taskId}", taskHandler.TaskRead).Methods(http.MethodGet)
@@ -73,7 +75,7 @@ func main() {
 	}
 	defer db.Close()
 
-	reddis.RedisClient, err = reddis.NewReddisClient(ctx)
+	redisCln, err := reddis.NewReddisClient(ctx)
 	if err != nil {
 		log.Fatalf("Could not to redis server. err = %v", err)
 	}
@@ -81,7 +83,7 @@ func main() {
 	// datadog.Init()
 
 	fmt.Println("🔥 Init Redis...")
-	defer reddis.RedisClient.Close()
+	defer redisCln.Close()
 
 	rabbitmq, err := rabbitmq.Init()
 	if err != nil {
@@ -94,7 +96,7 @@ func main() {
 	repo := repository.NewTaskRepository(db, ctx)
 
 	fmt.Println("🔥 Init Service...")
-	taskService := services.NewTaskService(repo)
+	taskService := services.NewTaskService(repo, redisCln)
 
 	var paramGrpc grpc.ParamClientGrpc = grpc.ParamClientGrpc{
 		Ctx:  ctx,
@@ -107,7 +109,7 @@ func main() {
 	fmt.Println("🔥 Init gRPC Client...")
 
 	fmt.Println("🔥 Init Handler...")
-	taskHandler := handler.NewTaskHandler(taskService, ctx, clientGrpc, rabbitmq)
+	taskHandler := handler.NewTaskHandler(taskService, ctx, clientGrpc, rabbitmq, redisCln)
 
 	router(taskHandler)
 

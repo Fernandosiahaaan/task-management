@@ -11,12 +11,21 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
-var (
-	RedisClient *redis.Client
+const (
+	PrefixKeyLoginInfo = "user-service:jwt"
+	PrefixKeyUserInfo  = "user-service:user"
+	PrefixKeyTaskInfo  = "task-service:task"
 )
 
-func NewReddisClient(ctx context.Context) (*redis.Client, error) {
+type RedisCln struct {
+	Redis  *redis.Client
+	Ctx    context.Context
+	Cancel context.CancelFunc
+}
+
+func NewReddisClient(ctx context.Context) (*RedisCln, error) {
 	// Connect to Redis
+	ctxRedis, cancel := context.WithCancel(ctx)
 	host := fmt.Sprintf("localhost:%s", os.Getenv("REDIS_PORT"))
 	client := redis.NewClient(&redis.Options{
 		Addr:     host, // Replace with your Redis server address
@@ -30,12 +39,18 @@ func NewReddisClient(ctx context.Context) (*redis.Client, error) {
 		log.Fatal("Error connecting to Redis:", err)
 		return nil, err
 	}
+	var redis *RedisCln = &RedisCln{
+		Redis:  client,
+		Ctx:    ctxRedis,
+		Cancel: cancel,
+	}
 	fmt.Println("Connected to Redis:", pong)
-	return client, nil
+	return redis, nil
 }
 
-func GetLoginInfoFromRedis(ctx context.Context, jwtToken string) (loginInfo model.LoginCacheData, err error) {
-	loginJson, err := RedisClient.Get(ctx, jwtToken).Result()
+func (r *RedisCln) GetLoginInfoFromRedis(jwtToken string) (loginInfo model.LoginCacheData, err error) {
+	keyLoginInfo := fmt.Sprintf("%s:%s", PrefixKeyLoginInfo, jwtToken)
+	loginJson, err := r.Redis.Get(r.Ctx, keyLoginInfo).Result()
 	if err != nil {
 		return loginInfo, fmt.Errorf("failed get login info from redis")
 	}
@@ -44,4 +59,37 @@ func GetLoginInfoFromRedis(ctx context.Context, jwtToken string) (loginInfo mode
 		return loginInfo, fmt.Errorf("failed convert data login info from json")
 	}
 	return loginInfo, nil
+}
+
+func (r *RedisCln) SetTaskInfoToRedis(task *model.Task) error {
+	taskJson, err := json.Marshal(task)
+	if err != nil {
+		return fmt.Errorf("failed convert user info to json")
+	}
+
+	// send user info to reddis data
+	keyTaskInfo := fmt.Sprintf("%s:%d", PrefixKeyTaskInfo, task.Id)
+	err = r.Redis.Set(r.Ctx, keyTaskInfo, taskJson, model.SessionTime).Err() // Set waktu kadaluarsa 30 menit
+	if err != nil {
+		return fmt.Errorf("error saving login info to redis. err = %s", err.Error())
+	}
+	return nil
+}
+
+func (r *RedisCln) GetTaskInfoFromRedis(taskId int64) (taskInfo *model.Task, err error) {
+	keyTaskInfo := fmt.Sprintf("%s:%d", PrefixKeyTaskInfo, taskId)
+	taskJson, err := r.Redis.Get(r.Ctx, keyTaskInfo).Result()
+	if err != nil {
+		return nil, fmt.Errorf("failed get login info from redis")
+	}
+	err = json.Unmarshal([]byte(taskJson), &taskInfo)
+	if err != nil {
+		return nil, fmt.Errorf("failed convert data login info from json")
+	}
+	return taskInfo, nil
+}
+
+func (r *RedisCln) Close() {
+	r.Redis.Close()
+	r.Cancel()
 }
