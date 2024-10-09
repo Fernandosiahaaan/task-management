@@ -8,12 +8,29 @@ import (
 	"os"
 	"strings"
 	"time"
+	"user-service/infrastructure/reddis"
 	"user-service/internal/model"
 
 	"github.com/dgrijalva/jwt-go"
 )
 
-func CreateToken(username string, password string) (string, error) {
+type Midleware struct {
+	ctx    context.Context
+	cancel context.CancelFunc
+	redis  *reddis.RedisCln
+}
+
+func NewMidleware(ctx context.Context, redis *reddis.RedisCln) *Midleware {
+	midlewareCtx, midlewareCancel := context.WithCancel(ctx)
+	var middleware *Midleware = &Midleware{
+		ctx:    midlewareCtx,
+		cancel: midlewareCancel,
+		redis:  redis,
+	}
+	return middleware
+}
+
+func (m *Midleware) CreateToken(username string, password string) (string, error) {
 	secretKey := []byte(os.Getenv("SECRET_KEY"))
 	token := jwt.NewWithClaims(jwt.SigningMethodHS256,
 		jwt.MapClaims{
@@ -28,7 +45,7 @@ func CreateToken(username string, password string) (string, error) {
 	return tokenString, nil
 }
 
-func VerifyToken(tokenString string) (*jwt.Token, error) {
+func (m *Midleware) VerifyToken(tokenString string) (*jwt.Token, error) {
 	secretKey := []byte(os.Getenv("SECRET_KEY"))
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		return secretKey, nil
@@ -42,7 +59,7 @@ func VerifyToken(tokenString string) (*jwt.Token, error) {
 	return token, nil
 }
 
-func AuthMiddleware(next http.Handler) http.Handler {
+func (m *Midleware) AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
@@ -58,7 +75,8 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		token, err := VerifyToken(bearerToken[1])
+		var jwtToken string = bearerToken[1]
+		token, err := m.VerifyToken(jwtToken)
 		if err != nil {
 			model.CreateResponseHttp(w, http.StatusUnauthorized, model.ResponseHttp{Error: true, Message: fmt.Sprintf("Failed token. err = %s", err)})
 			return
@@ -74,10 +92,20 @@ func AuthMiddleware(next http.Handler) http.Handler {
 			return
 		}
 
-		ctx := context.WithValue(r.Context(), "jwtToken", bearerToken[1])
+		_, err = m.redis.GetLoginInfo(jwtToken)
+		if err != nil {
+			model.CreateResponseHttp(w, http.StatusUnauthorized, model.ResponseHttp{Error: true, Message: fmt.Sprintf("Token session expired. err = %s", err)})
+			return
+		}
+
+		ctx := context.WithValue(r.Context(), "jwtToken", jwtToken)
 		ctx2 := context.WithValue(ctx, "user", claims)
 		r = r.WithContext(ctx2)
 		next.ServeHTTP(w, r)
 	})
 
+}
+
+func (m *Midleware) Close() {
+	m.cancel()
 }

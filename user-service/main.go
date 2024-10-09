@@ -33,9 +33,9 @@ func router(userHandler *handler.UserHandler) {
 	router.HandleFunc("/user", userHandler.UserCreate).Methods(http.MethodPost)
 	router.HandleFunc("/login", userHandler.UserLogin).Methods(http.MethodPost)
 	router.HandleFunc("/user/logout", userHandler.UserLogout).Methods(http.MethodPost)
-	router.Handle("/user", middleware.AuthMiddleware(http.HandlerFunc(userHandler.UsersGetAll))).Methods(http.MethodGet)
-	router.Handle("/user/{user_id}", middleware.AuthMiddleware(http.HandlerFunc(userHandler.UserGet))).Methods(http.MethodGet)
-	router.Handle("/user/{user_id}", middleware.AuthMiddleware(http.HandlerFunc(userHandler.UserUpdate))).Methods(http.MethodPut)
+	router.Handle("/user", userHandler.Midleware.AuthMiddleware(http.HandlerFunc(userHandler.UsersGetAll))).Methods(http.MethodGet)
+	router.Handle("/user/{user_id}", userHandler.Midleware.AuthMiddleware(http.HandlerFunc(userHandler.UserGet))).Methods(http.MethodGet)
+	router.Handle("/user/{user_id}", userHandler.Midleware.AuthMiddleware(http.HandlerFunc(userHandler.UserUpdate))).Methods(http.MethodPut)
 	router.HandleFunc("/user/protected", userHandler.ProtectedHandler).Methods(http.MethodGet)
 
 	portHttp := os.Getenv("PORT_HTTP")
@@ -75,34 +75,50 @@ func main() {
 	if err != nil {
 		log.Fatalf("Could not connect to the database: %v", err)
 	}
-	defer db.Close()
 
-	reddis.RedisClient, err = reddis.NewReddisClient(ctx)
+	fmt.Println("🔥 Init Repository...")
+	repo := repository.NewuserRepository(db, ctx)
+	defer repo.Close()
+
+	redis, err := reddis.NewReddisClient(ctx)
 	if err != nil {
 		log.Fatalf("Could not to redis server. err = %v", err)
 	}
 	fmt.Println("🔥 Init Redis...")
-	defer reddis.RedisClient.Close()
-
-	fmt.Println("🔥 Init Repository...")
-	repo := repository.NewuserRepository(db, ctx)
+	defer redis.Close()
 
 	fmt.Println("🔥 Init Service...")
-	userService := service.NewUserService(repo)
+	userService := service.NewUserService(ctx, redis, repo)
+	defer userService.Close()
 
 	var paramGrpc grpc.ParamServerGrpc = grpc.ParamServerGrpc{
 		Ctx:     ctx,
 		Port:    os.Getenv("GRPC_PORT"),
 		Service: userService,
+		Redis:   redis,
 	}
 	serverGrpc, err := grpc.NewConnect(paramGrpc)
 	if err != nil {
 		log.Fatalf("Could not connect to gRPC server. err = %s", err.Error())
 	}
 	fmt.Println("🔥 Init gRPC Server...")
+	go serverGrpc.StartListen()
+	defer serverGrpc.Close()
+
+	mw := middleware.NewMidleware(ctx, redis)
+	defer mw.Close()
+	fmt.Println("🔥 Init midleware...")
 
 	fmt.Println("🔥 Init Handler...")
-	userHandler := handler.NewUserHandler(userService, ctx, serverGrpc)
+	var paramHandler handler.ParamHandler = handler.ParamHandler{
+		Service:    userService,
+		Ctx:        ctx,
+		GrpcServer: serverGrpc,
+		Redis:      redis,
+		Midleware:  mw,
+	}
+	userHandler := handler.NewUserHandler(paramHandler)
+	defer userHandler.Close()
 
 	router(userHandler)
 

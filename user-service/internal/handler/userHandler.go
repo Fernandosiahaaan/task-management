@@ -16,12 +16,6 @@ import (
 	"github.com/gorilla/mux"
 )
 
-type UserHandler struct {
-	Service    *service.UserService
-	Ctx        context.Context
-	gRPCServer grpc.ServerGrpc
-}
-
 const (
 	MessageFailedToken     string = "Failed Token"
 	MessageFailedRedis     string = "Failed Login Session"
@@ -29,12 +23,36 @@ const (
 	MessageFailedReqUserId string = "Invalid User ID uri"
 )
 
-func NewUserHandler(service *service.UserService, ctx context.Context, serverGrpc grpc.ServerGrpc) *UserHandler {
-	go serverGrpc.StartListen()
-	return &UserHandler{Service: service, Ctx: ctx, gRPCServer: serverGrpc}
+type ParamHandler struct {
+	Service    *service.UserService
+	Ctx        context.Context
+	GrpcServer *grpc.ServerGrpc
+	Redis      *reddis.RedisCln
+	Midleware  *middleware.Midleware
 }
 
-func (s *UserHandler) UserCreate(w http.ResponseWriter, r *http.Request) {
+type UserHandler struct {
+	service    *service.UserService
+	Ctx        context.Context
+	cancel     context.CancelFunc
+	grpcServer *grpc.ServerGrpc
+	Redis      *reddis.RedisCln
+	Midleware  *middleware.Midleware
+}
+
+func NewUserHandler(param ParamHandler) *UserHandler {
+	handlerCtx, handlerCancel := context.WithCancel(param.Ctx)
+	return &UserHandler{
+		service:    param.Service,
+		Ctx:        handlerCtx,
+		cancel:     handlerCancel,
+		grpcServer: param.GrpcServer,
+		Redis:      param.Redis,
+		Midleware:  param.Midleware,
+	}
+}
+
+func (handler *UserHandler) UserCreate(w http.ResponseWriter, r *http.Request) {
 	var user model.User
 	w.Header().Set("Content-Type", "application/json")
 
@@ -46,7 +64,7 @@ func (s *UserHandler) UserCreate(w http.ResponseWriter, r *http.Request) {
 		user.Role = "user"
 	}
 
-	userId, err := s.Service.CreateNewUser(user)
+	userId, err := handler.service.CreateNewUser(user)
 	if err != nil {
 		model.CreateResponseHttp(w, http.StatusBadRequest, model.ResponseHttp{Error: true, Message: err.Error()})
 		return
@@ -55,7 +73,7 @@ func (s *UserHandler) UserCreate(w http.ResponseWriter, r *http.Request) {
 	model.CreateResponseHttp(w, http.StatusCreated, model.ResponseHttp{Error: false, Message: "User created", Data: user})
 }
 
-func (s *UserHandler) UserLogin(w http.ResponseWriter, r *http.Request) {
+func (handler *UserHandler) UserLogin(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	var user model.User
@@ -64,9 +82,9 @@ func (s *UserHandler) UserLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	user, err := s.Service.GetUser(user)
+	user, err := handler.service.GetUser(user)
 	if err == nil {
-		tokenString, err := middleware.CreateToken(user.Username, user.Password)
+		tokenString, err := handler.Midleware.CreateToken(user.Username, user.Password)
 		if err != nil {
 			model.CreateResponseHttp(w, http.StatusInternalServerError, model.ResponseHttp{Error: true, Message: "failed created token"})
 			return
@@ -74,13 +92,13 @@ func (s *UserHandler) UserLogin(w http.ResponseWriter, r *http.Request) {
 
 		// send login info and user info to redis
 		ctx := context.Background()
-		err = reddis.SetLoginInfoToRedis(ctx, tokenString, model.LoginCacheData{Id: user.Id, Username: user.Username})
+		err = handler.Redis.SetLoginInfo(ctx, tokenString, model.LoginCacheData{Id: user.Id, Username: user.Username})
 		if err != nil {
 			model.CreateResponseHttp(w, http.StatusInternalServerError, model.ResponseHttp{Error: true, Message: err.Error()})
 			return
 		}
 
-		err = reddis.SetUserInfoToRedis(ctx, user)
+		err = handler.Redis.SaveUserInfo(user)
 		if err != nil {
 			model.CreateResponseHttp(w, http.StatusInternalServerError, model.ResponseHttp{Error: true, Message: err.Error()})
 			return
@@ -94,7 +112,7 @@ func (s *UserHandler) UserLogin(w http.ResponseWriter, r *http.Request) {
 	model.CreateResponseHttp(w, http.StatusBadRequest, model.ResponseHttp{Error: true, Message: err.Error()})
 }
 
-func (s *UserHandler) UserLogout(w http.ResponseWriter, r *http.Request) {
+func (handler *UserHandler) UserLogout(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	authToken := r.Header.Get("Authorization")
 	if authToken == "" {
@@ -108,15 +126,14 @@ func (s *UserHandler) UserLogout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err := middleware.VerifyToken(bearerToken[1])
+	jwtToken := bearerToken[1]
+	_, err := handler.Midleware.VerifyToken(jwtToken)
 	if err != nil {
 		model.CreateResponseHttp(w, http.StatusUnauthorized, model.ResponseHttp{Error: true, Message: fmt.Sprintf("%s; err = %s", MessageFailedToken, err)})
 		return
 	}
 
-	ctx, cancel := context.WithCancel(s.Ctx)
-	defer cancel()
-	err = reddis.RedisClient.Del(ctx, bearerToken[1]).Err()
+	err = handler.Redis.DeleteLoginInfo(jwtToken)
 	if err != nil {
 		model.CreateResponseHttp(w, http.StatusInternalServerError, model.ResponseHttp{Error: true, Message: "Failed logout session"})
 		return
@@ -126,13 +143,12 @@ func (s *UserHandler) UserLogout(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func (s *UserHandler) UserGet(w http.ResponseWriter, r *http.Request) {
+func (handler *UserHandler) UserGet(w http.ResponseWriter, r *http.Request) {
 	// receive value form context midleware
 	tokenStr := r.Context().Value("jwtToken").(string)
-	userClaims := r.Context().Value("user").(jwt.MapClaims)
 
 	// get login info from redis
-	loginInfo, err := reddis.GetLoginInfoFromRedis(r.Context(), tokenStr)
+	loginInfo, err := handler.Redis.GetLoginInfo(tokenStr)
 	if err != nil {
 		model.CreateResponseHttp(w, http.StatusBadRequest, model.ResponseHttp{Error: true, Message: fmt.Sprintf("%s. Err = %s", MessageFailedRedis, err)})
 		return
@@ -140,41 +156,33 @@ func (s *UserHandler) UserGet(w http.ResponseWriter, r *http.Request) {
 
 	// validate uri
 	vars := mux.Vars(r)
+	userId := vars["user_id"]
 	if loginInfo.Id != vars["user_id"] {
 		model.CreateResponseHttp(w, http.StatusBadRequest, model.ResponseHttp{Error: true, Message: MessageFailedReqUserId})
 		return
 	}
 
 	// get user info from db
-	user, err := reddis.GetUserInfoFromRedis(r.Context(), loginInfo.Id)
+	user, err := handler.service.GetUserById(userId)
 	if err != nil {
-		// get user from db
-		userName, ok := userClaims["username"].(string)
-		userPass, ok2 := userClaims["password"].(string)
-		if !ok || !ok2 {
-			model.CreateResponseHttp(w, http.StatusUnauthorized, model.ResponseHttp{Error: true, Message: MessageFailedJWT})
-			return
-		}
-		user = model.User{Username: userName, Password: userPass}
-		user, err = s.Service.GetUser(user)
-		if err != nil {
-			model.CreateResponseHttp(w, http.StatusBadRequest, model.ResponseHttp{Error: true, Message: "Invalid username and password"})
-			return
-		}
+		model.CreateResponseHttp(w, http.StatusBadRequest, model.ResponseHttp{Error: true, Message: fmt.Sprintf("Invalid username and password. err = %v", err)})
+		return
+	} else if user == nil {
+		model.CreateResponseHttp(w, http.StatusBadRequest, model.ResponseHttp{Error: true, Message: "not found user"})
+		return
 	}
 
 	model.CreateResponseHttp(w, http.StatusOK, model.ResponseHttp{Error: false, Message: "success get info me", Data: user})
 }
 
-func (s *UserHandler) UserUpdate(w http.ResponseWriter, r *http.Request) {
+func (handler *UserHandler) UserUpdate(w http.ResponseWriter, r *http.Request) {
 	var userRequest model.User
 
 	// receive value form context midleware
 	tokenStr := r.Context().Value("jwtToken").(string)
-	userClaims := r.Context().Value("user").(jwt.MapClaims)
 
 	// get login info from redis
-	loginInfo, err := reddis.GetLoginInfoFromRedis(r.Context(), tokenStr)
+	loginInfo, err := handler.Redis.GetLoginInfo(tokenStr)
 	if err != nil {
 		model.CreateResponseHttp(w, http.StatusBadRequest, model.ResponseHttp{Error: true, Message: fmt.Sprintf("%s. Err = %s", MessageFailedRedis, err)})
 		return
@@ -182,29 +190,19 @@ func (s *UserHandler) UserUpdate(w http.ResponseWriter, r *http.Request) {
 
 	// validate uri
 	vars := mux.Vars(r)
-	fmt.Printf("user id = %s; login id = %s", vars["taskId"], loginInfo.Id)
-	if loginInfo.Id != vars["user_id"] {
+	userId := vars["user_id"]
+	if loginInfo.Id != userId {
 		model.CreateResponseHttp(w, http.StatusBadRequest, model.ResponseHttp{Error: true, Message: MessageFailedReqUserId})
 		return
 	}
 
-	// get user info from db
-	user, err := reddis.GetUserInfoFromRedis(r.Context(), loginInfo.Id)
+	// get user info from service
+	user, err := handler.service.GetUserById(userId)
 	if err != nil {
-		// Validasi token
-		userName, ok := userClaims["username"].(string)
-		userPass, ok2 := userClaims["password"].(string)
-		if !ok || !ok2 {
-			model.CreateResponseHttp(w, http.StatusUnauthorized, model.ResponseHttp{Error: true, Message: MessageFailedJWT})
-			return
-		}
-		user = model.User{Username: userName, Password: userPass}
-		user, err = s.Service.GetUser(user)
-		if err != nil {
-			model.CreateResponseHttp(w, http.StatusBadRequest, model.ResponseHttp{Error: true, Message: "Invalid username or password"})
-			return
-		}
+		model.CreateResponseHttp(w, http.StatusBadRequest, model.ResponseHttp{Error: true, Message: fmt.Sprintf("Invalid username and password. err = %v", err)})
+		return
 	}
+
 	// Decode JSON body
 	userRequest.Id = user.Id
 	if err = json.NewDecoder(r.Body).Decode(&userRequest); err != nil {
@@ -213,13 +211,8 @@ func (s *UserHandler) UserUpdate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Update user
-	userUpdated, err := s.Service.UpdateUser(userRequest)
+	userUpdated, err := handler.service.UpdateUser(userRequest)
 	if err != nil {
-		model.CreateResponseHttp(w, http.StatusInternalServerError, model.ResponseHttp{Error: true, Message: fmt.Sprintf("failed to update user %s, err: %s", userRequest.Username, err.Error())})
-		return
-	}
-
-	if err = reddis.SetUserInfoToRedis(r.Context(), userUpdated); err != nil {
 		model.CreateResponseHttp(w, http.StatusInternalServerError, model.ResponseHttp{Error: true, Message: err.Error()})
 		return
 	}
@@ -227,7 +220,7 @@ func (s *UserHandler) UserUpdate(w http.ResponseWriter, r *http.Request) {
 	model.CreateResponseHttp(w, http.StatusOK, model.ResponseHttp{Error: false, Message: "success update user", Data: userUpdated})
 }
 
-func (s *UserHandler) ProtectedHandler(w http.ResponseWriter, r *http.Request) {
+func (handler *UserHandler) ProtectedHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	tokenString := r.Header.Get("Authorization")
 	if tokenString == "" {
@@ -236,7 +229,7 @@ func (s *UserHandler) ProtectedHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	tokenString = tokenString[len("Bearer "):]
 
-	_, err := middleware.VerifyToken(tokenString)
+	_, err := handler.Midleware.VerifyToken(tokenString)
 	if err != nil {
 		model.CreateResponseHttp(w, http.StatusUnauthorized, model.ResponseHttp{Error: true, Message: fmt.Sprintf("%s. err = %s", MessageFailedToken, err)})
 		return
@@ -245,13 +238,13 @@ func (s *UserHandler) ProtectedHandler(w http.ResponseWriter, r *http.Request) {
 
 }
 
-func (s *UserHandler) UsersGetAll(w http.ResponseWriter, r *http.Request) {
+func (handler *UserHandler) UsersGetAll(w http.ResponseWriter, r *http.Request) {
 	// receive value form context midleware
 	tokenStr := r.Context().Value("jwtToken").(string)
 	userClaims := r.Context().Value("user").(jwt.MapClaims)
 
 	// get login info from redis
-	_, err := reddis.GetLoginInfoFromRedis(r.Context(), tokenStr)
+	_, err := handler.Redis.GetLoginInfo(tokenStr)
 	if err != nil {
 		model.CreateResponseHttp(w, http.StatusBadRequest, model.ResponseHttp{Error: true, Message: fmt.Sprintf("%s. Err = %s", MessageFailedRedis, err)})
 		return
@@ -263,11 +256,15 @@ func (s *UserHandler) UsersGetAll(w http.ResponseWriter, r *http.Request) {
 		model.CreateResponseHttp(w, http.StatusUnauthorized, model.ResponseHttp{Error: true, Message: "Invalid jwt token"})
 		return
 	}
-	users, err := s.Service.GetAllUsers()
+	users, err := handler.service.GetAllUsers()
 	if err != nil {
 		model.CreateResponseHttp(w, http.StatusBadRequest, model.ResponseHttp{Error: true, Message: "Invalid username and password"})
 		return
 	}
 
 	model.CreateResponseHttp(w, http.StatusOK, model.ResponseHttp{Error: false, Message: "success get info me", Data: users})
+}
+
+func (handler *UserHandler) Close() {
+	handler.cancel()
 }

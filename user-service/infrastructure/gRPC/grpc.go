@@ -7,8 +7,8 @@ import (
 	"net"
 
 	pb "user-service/infrastructure/gRPC/user"
-	"user-service/internal/model"
 	"user-service/infrastructure/reddis"
+	"user-service/internal/model"
 	"user-service/internal/service"
 
 	"google.golang.org/grpc"
@@ -18,47 +18,54 @@ type ParamServerGrpc struct {
 	Ctx     context.Context
 	Port    string
 	Service *service.UserService
+	Redis   *reddis.RedisCln
 }
 
 type ServerGrpc struct {
-	Hostname                          string
-	Ctx                               context.Context
-	Cancel                            context.CancelFunc
-	Listener                          net.Listener
-	Server                            *grpc.Server
-	Service                           *service.UserService
+	ctx                               context.Context
+	cancel                            context.CancelFunc
+	listener                          net.Listener
+	server                            *grpc.Server
+	service                           *service.UserService
+	redis                             *reddis.RedisCln
 	pb.UnimplementedUserServiceServer // Tambahkan ini untuk memastikan implementasi
 }
 
 // NewConnect initializes the gRPC server connection.
-func NewConnect(param ParamServerGrpc) (client ServerGrpc, err error) {
-	client.Ctx = param.Ctx
-	client.Service = param.Service
-	client.Listener, err = net.Listen("tcp", fmt.Sprintf(":%s", param.Port))
+func NewConnect(param ParamServerGrpc) (*ServerGrpc, error) {
+	var err error
+	grpcCtx, grpcCancel := context.WithCancel(param.Ctx)
+	var client *ServerGrpc = &ServerGrpc{
+		ctx:     grpcCtx,
+		cancel:  grpcCancel,
+		redis:   param.Redis,
+		service: param.Service,
+	}
+	client.listener, err = net.Listen("tcp", fmt.Sprintf(":%s", param.Port))
 	if err != nil {
-		return client, fmt.Errorf("Failed to listen: %v", err)
+		return nil, err
 	}
 
 	// Create gRPC server
-	client.Server = grpc.NewServer()
-	pb.RegisterUserServiceServer(client.Server, &client) // Ubah ini menjadi `&client`
+	client.server = grpc.NewServer()
+	pb.RegisterUserServiceServer(client.server, client) // Ubah ini menjadi `&client`
 
 	return client, nil
 }
 
 // StartListen starts the gRPC server to listen for incoming requests.
 func (s *ServerGrpc) StartListen() {
-	fmt.Printf("🌐 Server GRPC is running on port %s...\n", s.Listener.Addr().String())
-	if err := s.Server.Serve(s.Listener); err != nil {
+	fmt.Printf("🌐 Server GRPC is running on port %s...\n", s.listener.Addr().String())
+	if err := s.server.Serve(s.listener); err != nil {
 		log.Fatalf("Failed to serve: %v", err)
 	}
 }
 
 // Stop gracefully stops the gRPC server.
 func (s *ServerGrpc) Stop() {
-	s.Server.GracefulStop()
-	if s.Cancel != nil {
-		s.Cancel()
+	s.server.GracefulStop()
+	if s.cancel != nil {
+		s.cancel()
 	}
 	fmt.Println("Server stopped gracefully.")
 }
@@ -67,10 +74,10 @@ func (s *ServerGrpc) GetUser(ctx context.Context, req *pb.GetUserRequest) (*pb.G
 	fmt.Printf("Received request for User ID: %s\n", req.UserId)
 
 	// Initialize the user model with the provided User ID
-	var user model.User
+	var user *model.User
 
 	// Attempt to get user info from Redis cache
-	user, err := reddis.GetUserInfoFromRedis(s.Ctx, req.UserId)
+	user, err := s.redis.GetUserInfo(req.UserId)
 	if err == nil {
 		// Return successful response if found in Redis
 		return &pb.GetUserResponse{
@@ -84,7 +91,7 @@ func (s *ServerGrpc) GetUser(ctx context.Context, req *pb.GetUserRequest) (*pb.G
 
 	// If Redis fails, fetch the user info from the database via service
 	user.Id = req.UserId
-	user2, err := s.Service.GetUserById(&user)
+	user2, err := s.service.GetUserById(user.Id)
 	if err != nil {
 		return &pb.GetUserResponse{
 			UserId:   "",
@@ -114,4 +121,9 @@ func (s *ServerGrpc) GetUser(ctx context.Context, req *pb.GetUserRequest) (*pb.G
 		IsError:  false,
 		Message:  "Successfully retrieved data from user microservice",
 	}, nil
+}
+
+func (s *ServerGrpc) Close() {
+	s.server.Stop()
+	s.cancel()
 }
