@@ -8,7 +8,6 @@ import (
 
 	pb "user-service/infrastructure/gRPC/user"
 	"user-service/infrastructure/reddis"
-	"user-service/internal/model"
 	"user-service/internal/service"
 
 	"google.golang.org/grpc"
@@ -73,9 +72,6 @@ func (s *ServerGrpc) Stop() {
 func (s *ServerGrpc) GetUser(ctx context.Context, req *pb.GetUserRequest) (*pb.GetUserResponse, error) {
 	fmt.Printf("Received request for User ID: %s\n", req.UserId)
 
-	// Initialize the user model with the provided User ID
-	var user *model.User
-
 	// Attempt to get user info from Redis cache
 	user, err := s.redis.GetUserInfo(req.UserId)
 	if err == nil {
@@ -90,8 +86,7 @@ func (s *ServerGrpc) GetUser(ctx context.Context, req *pb.GetUserRequest) (*pb.G
 	}
 
 	// If Redis fails, fetch the user info from the database via service
-	user.Id = req.UserId
-	user2, err := s.service.GetUserById(user.Id)
+	user, err = s.service.GetUserById(req.UserId)
 	if err != nil {
 		return &pb.GetUserResponse{
 			UserId:   "",
@@ -103,7 +98,7 @@ func (s *ServerGrpc) GetUser(ctx context.Context, req *pb.GetUserRequest) (*pb.G
 	}
 
 	// Handle the case where the user is not found in the database
-	if user2 == nil {
+	if user == nil {
 		return &pb.GetUserResponse{
 			UserId:   "",
 			Username: "",
@@ -116,8 +111,8 @@ func (s *ServerGrpc) GetUser(ctx context.Context, req *pb.GetUserRequest) (*pb.G
 	// Return successful response with data from the database
 	return &pb.GetUserResponse{
 		UserId:   req.UserId,
-		Username: user2.Username, // Use the user2 data retrieved from the DB
-		Email:    user2.Email,
+		Username: user.Username, // Use the user data retrieved from the DB
+		Email:    user.Email,
 		IsError:  false,
 		Message:  "Successfully retrieved data from user microservice",
 	}, nil

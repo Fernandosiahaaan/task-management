@@ -104,7 +104,7 @@ func (handler *UserHandler) UserLogin(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		dataResponse := model.LoginData{Token: tokenString}
+		dataResponse := model.LoginData{Token: tokenString, Id: user.Id}
 		model.CreateResponseHttp(w, http.StatusOK, model.ResponseHttp{Error: false, Message: "Success login", Data: dataResponse})
 		return
 	}

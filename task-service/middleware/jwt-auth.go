@@ -12,20 +12,23 @@ import (
 	"github.com/dgrijalva/jwt-go"
 )
 
-type middleware struct {
-	Redis *reddis.RedisCln
-	Ctx   context.Context
+type Middleware struct {
+	redis  *reddis.Redis
+	ctx    context.Context
+	cancel context.CancelFunc
 }
 
-func NewMidleware(ctx context.Context, redis *reddis.RedisCln) *middleware {
-	return &middleware{
-		Ctx:   ctx,
-		Redis: redis,
+func NewMidleware(ctx context.Context, redis *reddis.Redis) *Middleware {
+	midlewareCtx, midlewareCancel := context.WithCancel(ctx)
+	return &Middleware{
+		ctx:    midlewareCtx,
+		cancel: midlewareCancel,
+		redis:  redis,
 	}
 
 }
 
-func (m *middleware) verifyToken(tokenString string) (*jwt.Token, error) {
+func (m *Middleware) verifyToken(tokenString string) (*jwt.Token, error) {
 	secretKey := []byte(os.Getenv("SECRET_KEY"))
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		return secretKey, nil
@@ -39,38 +42,38 @@ func (m *middleware) verifyToken(tokenString string) (*jwt.Token, error) {
 	return token, nil
 }
 
-func (m *middleware) AuthMiddleware(next http.Handler) http.Handler {
+func (m *Middleware) AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
 		authToken := r.Header.Get("Authorization")
 		if authToken == "" {
-			model.CreateResponseHttp(w, http.StatusUnauthorized, model.ResponseHttp{Error: true, Message: "Authentication header null"})
+			model.CreateResponseHttp(w, http.StatusUnauthorized, model.Response{Error: true, Message: "Authentication header null"})
 			return
 		}
 
 		bearerToken := strings.Split(authToken, " ")
 		if len(bearerToken) != 2 {
-			model.CreateResponseHttp(w, http.StatusUnauthorized, model.ResponseHttp{Error: true, Message: "Invalid format token"})
+			model.CreateResponseHttp(w, http.StatusUnauthorized, model.Response{Error: true, Message: "Invalid format token"})
 			return
 		}
 
 		var jwtToken string = bearerToken[1]
 		token, err := m.verifyToken(jwtToken)
 		if err != nil {
-			model.CreateResponseHttp(w, http.StatusUnauthorized, model.ResponseHttp{Error: true, Message: fmt.Sprintf("Failed token. err = %s", err)})
+			model.CreateResponseHttp(w, http.StatusUnauthorized, model.Response{Error: true, Message: fmt.Sprintf("Failed token. err = %s", err)})
 			return
 		}
 
 		_, ok := token.Claims.(jwt.MapClaims)
 		if !ok {
-			model.CreateResponseHttp(w, http.StatusUnauthorized, model.ResponseHttp{Error: true, Message: "Failed claims token"})
+			model.CreateResponseHttp(w, http.StatusUnauthorized, model.Response{Error: true, Message: "Failed claims token"})
 			return
 		}
 
-		_, err = m.Redis.GetLoginInfoFromRedis(jwtToken)
+		_, err = m.redis.GetLoginInfoFromRedis(jwtToken)
 		if err != nil {
-			model.CreateResponseHttp(w, http.StatusUnauthorized, model.ResponseHttp{Error: true, Message: fmt.Sprintf("Failed Login Session. Err = %s", err.Error())})
+			model.CreateResponseHttp(w, http.StatusUnauthorized, model.Response{Error: true, Message: fmt.Sprintf("Failed Login Session. Err = %s", err.Error())})
 			return
 		}
 
@@ -79,4 +82,8 @@ func (m *middleware) AuthMiddleware(next http.Handler) http.Handler {
 		next.ServeHTTP(w, r)
 	})
 
+}
+
+func (m *Middleware) Close() {
+	m.cancel()
 }

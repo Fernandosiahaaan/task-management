@@ -17,15 +17,15 @@ const (
 	PrefixKeyTaskInfo  = "task-service:task"
 )
 
-type RedisCln struct {
+type Redis struct {
 	Redis  *redis.Client
 	Ctx    context.Context
 	Cancel context.CancelFunc
 }
 
-func NewReddisClient(ctx context.Context) (*RedisCln, error) {
+func NewReddisClient(ctx context.Context) (*Redis, error) {
 	// Connect to Redis
-	ctxRedis, cancel := context.WithCancel(ctx)
+	ctxRedis, cancelRedis := context.WithCancel(ctx)
 	host := fmt.Sprintf("localhost:%s", os.Getenv("REDIS_PORT"))
 	client := redis.NewClient(&redis.Options{
 		Addr:     host, // Replace with your Redis server address
@@ -39,16 +39,16 @@ func NewReddisClient(ctx context.Context) (*RedisCln, error) {
 		log.Fatal("Error connecting to Redis:", err)
 		return nil, err
 	}
-	var redis *RedisCln = &RedisCln{
+	var redis *Redis = &Redis{
 		Redis:  client,
 		Ctx:    ctxRedis,
-		Cancel: cancel,
+		Cancel: cancelRedis,
 	}
 	fmt.Println("Connected to Redis:", pong)
 	return redis, nil
 }
 
-func (r *RedisCln) GetLoginInfoFromRedis(jwtToken string) (loginInfo model.LoginCacheData, err error) {
+func (r *Redis) GetLoginInfoFromRedis(jwtToken string) (loginInfo model.LoginCacheData, err error) {
 	keyLoginInfo := fmt.Sprintf("%s:%s", PrefixKeyLoginInfo, jwtToken)
 	loginJson, err := r.Redis.Get(r.Ctx, keyLoginInfo).Result()
 	if err != nil {
@@ -61,7 +61,7 @@ func (r *RedisCln) GetLoginInfoFromRedis(jwtToken string) (loginInfo model.Login
 	return loginInfo, nil
 }
 
-func (r *RedisCln) SetTaskInfoToRedis(task *model.Task) error {
+func (r *Redis) SetTaskInfoToRedis(task *model.Task) error {
 	taskJson, err := json.Marshal(task)
 	if err != nil {
 		return fmt.Errorf("failed convert user info to json")
@@ -76,7 +76,7 @@ func (r *RedisCln) SetTaskInfoToRedis(task *model.Task) error {
 	return nil
 }
 
-func (r *RedisCln) GetTaskInfoFromRedis(taskId int64) (taskInfo *model.Task, err error) {
+func (r *Redis) GetTaskInfoFromRedis(taskId int64) (taskInfo *model.Task, err error) {
 	keyTaskInfo := fmt.Sprintf("%s:%d", PrefixKeyTaskInfo, taskId)
 	taskJson, err := r.Redis.Get(r.Ctx, keyTaskInfo).Result()
 	if err != nil {
@@ -89,7 +89,7 @@ func (r *RedisCln) GetTaskInfoFromRedis(taskId int64) (taskInfo *model.Task, err
 	return taskInfo, nil
 }
 
-func (r *RedisCln) Close() {
+func (r *Redis) Close() {
 	r.Redis.Close()
 	r.Cancel()
 }

@@ -16,23 +16,25 @@ type ParamClientGrpc struct {
 }
 
 type ClientGrpc struct {
-	Hostname string
-	Ctx      context.Context
-	Cancel   context.CancelFunc
-	Client   pb.UserServiceClient
-	Conn     *grpc.ClientConn
+	hostname string
+	ctx      context.Context
+	cancel   context.CancelFunc
+	client   pb.UserServiceClient
+	conn     *grpc.ClientConn
 }
 
-func ConnectToServerGrpc(param ParamClientGrpc) (client ClientGrpc, err error) {
-	client.Ctx, client.Cancel = context.WithCancel(param.Ctx)
+func ConnectToServerGrpc(param ParamClientGrpc) (*ClientGrpc, error) {
+	var err error
+	var client *ClientGrpc = &ClientGrpc{}
+	client.ctx, client.cancel = context.WithCancel(param.Ctx)
 
-	client.Hostname = fmt.Sprintf("localhost:%s", param.Port)
-	client.Conn, err = grpc.Dial(client.Hostname, grpc.WithInsecure(), grpc.WithIdleTimeout(10*time.Second))
+	client.hostname = fmt.Sprintf("localhost:%s", param.Port)
+	client.conn, err = grpc.Dial(client.hostname, grpc.WithInsecure(), grpc.WithIdleTimeout(10*time.Second))
 	if err != nil {
-		return client, fmt.Errorf("Failed connected client grpc. err = %v", err)
+		return nil, err
 	}
 
-	client.Client = pb.NewUserServiceClient(client.Conn)
+	client.client = pb.NewUserServiceClient(client.conn)
 	return client, nil
 }
 
@@ -42,7 +44,7 @@ func (client *ClientGrpc) RequestUserInfo(userId string, timeout time.Duration) 
 	defer cancel()
 
 	// Panggil RPC GetUser dengan ID user
-	res, err := client.Client.GetUser(ctx, &pb.GetUserRequest{UserId: userId})
+	res, err := client.client.GetUser(ctx, &pb.GetUserRequest{UserId: userId})
 	if err != nil {
 		return nil, fmt.Errorf("Could not get user response. err = %s", err.Error())
 	} else if res.IsError {
@@ -53,8 +55,8 @@ func (client *ClientGrpc) RequestUserInfo(userId string, timeout time.Duration) 
 }
 
 func (client *ClientGrpc) Stop() {
-	client.Conn.Close()
-	client.Cancel()
+	client.conn.Close()
+	client.cancel()
 }
 
 func (client *ClientGrpc) ValidateUserUUID(assignedTo string, createdBy string) error {
@@ -68,4 +70,9 @@ func (client *ClientGrpc) ValidateUserUUID(assignedTo string, createdBy string) 
 		return fmt.Errorf("failed uuid assigned_to of task. err %s", err.Error())
 	}
 	return nil
+}
+
+func (client *ClientGrpc) Close() {
+	client.conn.Close()
+	client.cancel()
 }

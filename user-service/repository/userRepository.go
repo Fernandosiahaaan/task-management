@@ -75,7 +75,7 @@ func (r *UserRepository) GetUserById(userId string) (*model.User, error) {
 	FROM users 
 	WHERE id=$1
 	`
-	var existUser *model.User
+	var existUser *model.User = &model.User{}
 	err := r.db.QueryRowContext(r.ctx, query, userId).Scan(
 		&existUser.Id,
 		&existUser.Username,

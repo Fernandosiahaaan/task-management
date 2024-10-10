@@ -13,6 +13,7 @@ type ResponseHttp struct {
 }
 
 type LoginData struct {
+	Id    string `json:"user_id"`
 	Token string `json:"token"`
 }
 

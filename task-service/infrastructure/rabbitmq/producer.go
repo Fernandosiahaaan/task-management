@@ -1,6 +1,7 @@
 package rabbitmq
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -20,8 +21,10 @@ const (
 )
 
 type RabbitMq struct {
-	URL  string
-	Conn *amqp.Connection
+	URL    string
+	Conn   *amqp.Connection
+	ctx    context.Context
+	cancel context.CancelFunc
 }
 
 // Helper function to handle errors
@@ -32,9 +35,12 @@ func failOnError(err error, msg string) {
 }
 
 // Initialize RabbitMQ connection
-func Init() (*RabbitMq, error) {
-	// Create a new instance of rabbitMq
-	output := &RabbitMq{}
+func Init(ctx context.Context) (*RabbitMq, error) {
+	rabbitmqCtx, rabbitmqCancel := context.WithCancel(ctx)
+	var output *RabbitMq = &RabbitMq{
+		ctx:    rabbitmqCtx,
+		cancel: rabbitmqCancel,
+	}
 
 	// Retrieve credentials from environment variables
 	username := os.Getenv("RABBITMQ_USERNAME")
@@ -88,4 +94,9 @@ func (r *RabbitMq) SendMessage(exchangeName, action, message string) {
 	failOnError(err, "Failed to publish message")
 
 	fmt.Printf(" [x] Sent %s: %s\n", action, message)
+}
+
+func (r *RabbitMq) Close() {
+	r.Conn.Close()
+	r.cancel()
 }

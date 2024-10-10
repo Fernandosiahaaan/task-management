@@ -22,20 +22,18 @@ import (
 	_ "github.com/lib/pq"
 )
 
-func router(taskHandler *handler.TaskHandler) {
+func router(handler *handler.TaskHandler) {
 	router := mux.NewRouter()
 	router.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 	}).Methods("GET")
 
-	//
-	midleware := middleware.NewMidleware(taskHandler.Ctx, taskHandler.Redis)
-	router.Use(midleware.AuthMiddleware)
-	router.HandleFunc("/tasks", taskHandler.TaskReadAll).Methods(http.MethodGet)
-	router.HandleFunc("/tasks", taskHandler.TaskCreate).Methods(http.MethodPost)
-	router.HandleFunc("/tasks/{taskId}", taskHandler.TaskRead).Methods(http.MethodGet)
-	router.HandleFunc("/tasks/{taskId}", taskHandler.TaskUpdate).Methods(http.MethodPut)
-	router.HandleFunc("/tasks/{taskId}", taskHandler.TaskDelete).Methods(http.MethodDelete)
+	router.Use(handler.Midleware.AuthMiddleware)
+	router.HandleFunc("/tasks", handler.TaskReadAll).Methods(http.MethodGet)
+	router.HandleFunc("/tasks", handler.TaskCreate).Methods(http.MethodPost)
+	router.HandleFunc("/tasks/{taskId}", handler.TaskRead).Methods(http.MethodGet)
+	router.HandleFunc("/tasks/{taskId}", handler.TaskUpdate).Methods(http.MethodPut)
+	router.HandleFunc("/tasks/{taskId}", handler.TaskDelete).Methods(http.MethodDelete)
 
 	portHttp := os.Getenv("PORT_HTTP")
 	if portHttp == "" {
@@ -73,30 +71,28 @@ func main() {
 	if err != nil {
 		log.Fatalf("Could not connect to the database: %v", err)
 	}
-	defer db.Close()
 
-	redisCln, err := reddis.NewReddisClient(ctx)
+	repo := repository.NewTaskRepository(db, ctx)
+	defer repo.Close()
+	fmt.Println("🔥 Init Repository...")
+
+	redis, err := reddis.NewReddisClient(ctx)
 	if err != nil {
 		log.Fatalf("Could not to redis server. err = %v", err)
 	}
-	// fmt.Println("🔥 Init Datadog...")
-	// datadog.Init()
-
+	defer redis.Close()
 	fmt.Println("🔥 Init Redis...")
-	defer redisCln.Close()
 
-	rabbitmq, err := rabbitmq.Init()
+	rabbitmq, err := rabbitmq.Init(ctx)
 	if err != nil {
 		log.Fatalf("failed init rabbitmq, err = %v", err)
 	}
-	defer rabbitmq.Conn.Close()
+	defer rabbitmq.Close()
 	fmt.Println("🔥 Init Redis...")
 
-	fmt.Println("🔥 Init Repository...")
-	repo := repository.NewTaskRepository(db, ctx)
-
+	taskService := services.NewTaskService(ctx, repo, redis)
+	defer taskService.Close()
 	fmt.Println("🔥 Init Service...")
-	taskService := services.NewTaskService(repo, redisCln)
 
 	var paramGrpc grpc.ParamClientGrpc = grpc.ParamClientGrpc{
 		Ctx:  ctx,
@@ -106,11 +102,24 @@ func main() {
 	if err != nil {
 		log.Fatalf("Could not connect gRPC client. err = %s", err.Error())
 	}
+	defer clientGrpc.Close()
 	fmt.Println("🔥 Init gRPC Client...")
 
+	midleware := middleware.NewMidleware(ctx, redis)
+	defer midleware.Close()
+	fmt.Println("🔥 Init Midleware...")
+
+	var paramHandler *handler.ParamHandler = &handler.ParamHandler{
+		Service:    taskService,
+		Ctx:        ctx,
+		ClientGrpc: clientGrpc,
+		RabbitMq:   rabbitmq,
+		Redis:      redis,
+		Midleware:  midleware,
+	}
+	taskHandler := handler.NewTaskHandler(paramHandler)
+	defer taskHandler.Close()
 	fmt.Println("🔥 Init Handler...")
-	taskHandler := handler.NewTaskHandler(taskService, ctx, clientGrpc, rabbitmq, redisCln)
 
 	router(taskHandler)
-
 }
