@@ -1,8 +1,10 @@
 package mail
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/smtp"
+	"notification-service/internal/model"
 )
 
 type Mail struct {
@@ -18,20 +20,25 @@ func Init(email, password string) (*Mail, error) {
 	return mail, nil
 }
 
-func (m *Mail) SendEmail(subject, body string) {
-	to := []string{"example@gmail.com"}
+func (m *Mail) SendTaskMsgEmail(subject, body string) {
+	emailPurpose := []string{"example@gmail.com"}
+
+	var response *model.Response = &model.Response{}
+	err := json.Unmarshal([]byte(body), response)
+	if err != nil {
+		fmt.Printf("❌ failed send task message to email. err = %v", err)
+	}
 
 	// Set up authentication information
 	auth := smtp.PlainAuth("", m.Email, m.Password, "smtp.gmail.com")
-
-	// Pesan email
-	msg := []byte(fmt.Sprintf("Subject: %s\r\n\r\n%s", subject, body))
+	sendEmail := fmt.Sprintf("Status = %s\nData = %s", response.Message, response.Data)
+	msg := []byte(fmt.Sprintf("Subject: %s\r\n\r\n%s", subject, sendEmail))
 
 	// Mengirim email via Gmail SMTP
-	err := smtp.SendMail("smtp.gmail.com:587", auth, m.Email, to, msg)
+	err = smtp.SendMail("smtp.gmail.com:587", auth, m.Email, emailPurpose, msg)
 	if err != nil {
-		fmt.Printf("❌ Failed to send email: %s", err)
+		fmt.Printf("❌ Failed to send task message to email: %s", err)
 	} else {
-		fmt.Printf("✔️ Email sent successfully with subject: %s", subject)
+		fmt.Printf("✔️ Task Message sent successfully to Email. with subject: %s", subject)
 	}
 }

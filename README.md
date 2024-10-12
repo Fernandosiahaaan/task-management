@@ -9,16 +9,21 @@ The development utilizes several tech stacks, such as:
 - Microservice (user service, task service, log service, notification service).
 - Clean architecture
 - JWT Token Auth
-- Redis -> for caching data
-- RabbitMq -> message queue for async communication microservice (in progress)
-- gRPC (Google Remote Procedure Call) -> for sync communication microservice
-- PostgreeDB (SQL DB) -> for task, and user microservice DB
-- MongoDB (No SQL DB) -> for logging microservice DB (in progress)
-- Docker -> for setup env & bundling all stack tech
+- Redis caching data -> for caching data
+- RabbitMq message queue -> message queue for async communication microservice
+- gRPC synchronuis message (Google Remote Procedure Call) -> for sync communication microservice
+- PostgreeDB Database (SQL DB) -> for task, and user microservice DB
+- MongoDB Database (No SQL DB) -> for logging microservice DB (in progress)
+- Docker containers-> for setup env & bundling all stack tech
+- DataDog Monitoring tool
 
 ## 🖊 Documentation
 
 - Documentation : [Tech Documentation](https://maroon-crabapple-bb5.notion.site/Collaborative-Task-Management-Backend-1107b515908e80a997c3ee75907ffb2b?pvs=4)
+
+## 🖊 Monitoring
+
+- Documentation : [Monitoring Datadog](https://us5.datadoghq.com/dashboard/skm-ajv-35u/-monitoring-tools-project-tasks-management?fromUser=false&refresh_mode=sliding&from_ts=1728733907394&to_ts=1728737507394&live=true)
 
 ## 🖊 PreRequire
 

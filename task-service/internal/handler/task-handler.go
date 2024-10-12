@@ -186,6 +186,9 @@ func (s *TaskHandler) compareUser(jwtToken string, userId string) error {
 		return fmt.Errorf("failed validation user. err = %s", err.Error())
 	}
 
+	fmt.Println("login info id = ", loginInfo.Id)
+	fmt.Println("user id = ", userId)
+
 	if loginInfo.Id != userId {
 		return fmt.Errorf("updated_by / created_by not equal with user login")
 	}

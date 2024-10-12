@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -10,6 +9,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"user-service/infrastructure/datadog"
 	grpc "user-service/infrastructure/gRPC"
 	"user-service/infrastructure/reddis"
 	"user-service/internal/handler"
@@ -19,7 +19,6 @@ import (
 
 	"github.com/gorilla/handlers"
 	"github.com/joho/godotenv"
-	_ "github.com/lib/pq"
 	muxtrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/gorilla/mux"
 )
 
@@ -71,25 +70,26 @@ func main() {
 		log.Fatalf("Error loading .env file")
 	}
 
-	db, err := sql.Open("postgres", os.Getenv("POSTGRES_URI"))
-	if err != nil {
-		log.Fatalf("Could not connect to the database: %v", err)
-	}
+	datadog.Init()
+	defer datadog.Close()
 
-	fmt.Println("🔥 Init Repository...")
-	repo := repository.NewuserRepository(db, ctx)
+	repo, err := repository.NewuserRepository(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
 	defer repo.Close()
+	fmt.Println("🔥 Init Repository...")
 
 	redis, err := reddis.NewReddisClient(ctx)
 	if err != nil {
 		log.Fatalf("Could not to redis server. err = %v", err)
 	}
-	fmt.Println("🔥 Init Redis...")
 	defer redis.Close()
+	fmt.Println("🔥 Init Redis...")
 
-	fmt.Println("🔥 Init Service...")
 	userService := service.NewUserService(ctx, redis, repo)
 	defer userService.Close()
+	fmt.Println("🔥 Init Service...")
 
 	var paramGrpc grpc.ParamServerGrpc = grpc.ParamServerGrpc{
 		Ctx:     ctx,
@@ -101,9 +101,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("Could not connect to gRPC server. err = %s", err.Error())
 	}
-	fmt.Println("🔥 Init gRPC Server...")
 	go serverGrpc.StartListen()
 	defer serverGrpc.Close()
+	fmt.Println("🔥 Init gRPC Server...")
 
 	mw := middleware.NewMidleware(ctx, redis)
 	defer mw.Close()

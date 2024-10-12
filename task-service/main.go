@@ -2,12 +2,12 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"task-service/infrastructure/datadog"
 	grpc "task-service/infrastructure/gRPC"
 	"task-service/infrastructure/rabbitmq"
 	"task-service/infrastructure/reddis"
@@ -17,13 +17,12 @@ import (
 	"task-service/repository"
 
 	"github.com/gorilla/handlers"
-	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
-	_ "github.com/lib/pq"
+	muxtrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/gorilla/mux"
 )
 
 func router(handler *handler.TaskHandler) {
-	router := mux.NewRouter()
+	router := muxtrace.NewRouter()
 	router.HandleFunc("/ping", func(w http.ResponseWriter, r *http.Request) {
 		json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 	}).Methods("GET")
@@ -67,12 +66,13 @@ func main() {
 		log.Fatalf("Error loading .env file")
 	}
 
-	db, err := sql.Open("postgres", os.Getenv("POSTGRES_URI"))
-	if err != nil {
-		log.Fatalf("Could not connect to the database: %v", err)
-	}
+	datadog.Init()
+	defer datadog.Close()
 
-	repo := repository.NewTaskRepository(db, ctx)
+	repo, err := repository.NewTaskRepository(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
 	defer repo.Close()
 	fmt.Println("🔥 Init Repository...")
 

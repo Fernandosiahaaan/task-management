@@ -4,7 +4,13 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"os"
 	"task-service/internal/model"
+
+	sqltrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql"
+
+	"github.com/lib/pq"
+	_ "github.com/lib/pq"
 )
 
 type TaskRepository struct {
@@ -13,13 +19,20 @@ type TaskRepository struct {
 	cancel context.CancelFunc
 }
 
-func NewTaskRepository(db *sql.DB, ctx context.Context) *TaskRepository {
+func NewTaskRepository(ctx context.Context) (*TaskRepository, error) {
+	sqltrace.Register("postgres", &pq.Driver{})
+
+	db, err := sqltrace.Open("postgres", os.Getenv("POSTGRES_URI"))
+	if err != nil {
+		return nil, fmt.Errorf("could not connect to the database: %v", err)
+	}
+
 	repoCtx, repoCancel := context.WithCancel(ctx)
 	return &TaskRepository{
 		db:     db,
 		ctx:    repoCtx,
 		cancel: repoCancel,
-	}
+	}, nil
 }
 
 func (r *TaskRepository) CreateNewTask(task *model.Task) (int64, error) {

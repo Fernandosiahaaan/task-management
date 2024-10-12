@@ -5,12 +5,12 @@ import (
 	"fmt"
 	"log"
 	"net"
-
 	pb "user-service/infrastructure/gRPC/user"
 	"user-service/infrastructure/reddis"
 	"user-service/internal/service"
 
 	"google.golang.org/grpc"
+	grpctrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc"
 )
 
 type ParamServerGrpc struct {
@@ -34,6 +34,9 @@ type ServerGrpc struct {
 func NewConnect(param ParamServerGrpc) (*ServerGrpc, error) {
 	var err error
 	grpcCtx, grpcCancel := context.WithCancel(param.Ctx)
+
+	si := grpctrace.StreamServerInterceptor(grpctrace.WithServiceName("my-grpc-server"))
+	ui := grpctrace.UnaryServerInterceptor(grpctrace.WithServiceName("my-grpc-server"))
 	var client *ServerGrpc = &ServerGrpc{
 		ctx:     grpcCtx,
 		cancel:  grpcCancel,
@@ -46,7 +49,7 @@ func NewConnect(param ParamServerGrpc) (*ServerGrpc, error) {
 	}
 
 	// Create gRPC server
-	client.server = grpc.NewServer()
+	client.server = grpc.NewServer(grpc.StreamInterceptor(si), grpc.UnaryInterceptor(ui))
 	pb.RegisterUserServiceServer(client.server, client) // Ubah ini menjadi `&client`
 
 	return client, nil

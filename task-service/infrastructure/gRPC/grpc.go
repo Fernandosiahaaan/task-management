@@ -8,6 +8,7 @@ import (
 	pb "task-service/infrastructure/gRPC/user"
 
 	"google.golang.org/grpc"
+	grpctrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc"
 )
 
 type ParamClientGrpc struct {
@@ -28,8 +29,17 @@ func ConnectToServerGrpc(param ParamClientGrpc) (*ClientGrpc, error) {
 	var client *ClientGrpc = &ClientGrpc{}
 	client.ctx, client.cancel = context.WithCancel(param.Ctx)
 
+	si := grpctrace.StreamClientInterceptor(grpctrace.WithServiceName("my-grpc-client"))
+	ui := grpctrace.UnaryClientInterceptor(grpctrace.WithServiceName("my-grpc-client"))
+
 	client.hostname = fmt.Sprintf("localhost:%s", param.Port)
-	client.conn, err = grpc.Dial(client.hostname, grpc.WithInsecure(), grpc.WithIdleTimeout(10*time.Second))
+	client.conn, err = grpc.Dial(
+		client.hostname,
+		grpc.WithInsecure(),
+		grpc.WithIdleTimeout(10*time.Second),
+		grpc.WithStreamInterceptor(si),
+		grpc.WithUnaryInterceptor(ui),
+	)
 	if err != nil {
 		return nil, err
 	}

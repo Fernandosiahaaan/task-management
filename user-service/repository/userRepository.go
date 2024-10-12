@@ -3,7 +3,14 @@ package repository
 import (
 	"context"
 	"database/sql"
+	"fmt"
+	"os"
 	"user-service/internal/model"
+
+	sqltrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/database/sql"
+
+	"github.com/lib/pq"
+	_ "github.com/lib/pq"
 )
 
 type UserRepository struct {
@@ -12,13 +19,20 @@ type UserRepository struct {
 	cancel context.CancelFunc
 }
 
-func NewuserRepository(db *sql.DB, ctx context.Context) *UserRepository {
+func NewuserRepository(ctx context.Context) (*UserRepository, error) {
+	sqltrace.Register("postgres", &pq.Driver{})
+
+	db, err := sqltrace.Open("postgres", os.Getenv("POSTGRES_URI"))
+	if err != nil {
+		return nil, fmt.Errorf("could not connect to the database: %v", err)
+	}
+
 	dbCtx, dbCancel := context.WithCancel(ctx)
 	return &UserRepository{
 		db:     db,
 		ctx:    dbCtx,
 		cancel: dbCancel,
-	}
+	}, nil
 }
 
 func (r *UserRepository) CreateNewUser(user model.User) (string, error) {

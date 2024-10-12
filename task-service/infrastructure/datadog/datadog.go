@@ -14,5 +14,8 @@ func Init() {
 		tracer.WithAgentAddr(host),
 		tracer.WithServiceName("my-task-service"),
 	)
-	defer tracer.Stop()
+}
+
+func Close() {
+	tracer.Stop()
 }

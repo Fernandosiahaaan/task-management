@@ -118,7 +118,7 @@ func (r *rabbitMq) ReceiveMessage() {
 				subject = "[task-service] Task Notification"
 			}
 			fmt.Printf("Received subject: %s; Message: %s\n", subject, msg.Body)
-			r.Email.SendEmail(subject, string(msg.Body))
+			r.Email.SendTaskMsgEmail(subject, string(msg.Body))
 		}
 	}()
 
