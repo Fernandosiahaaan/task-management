@@ -23,7 +23,7 @@ The development utilizes several tech stacks, such as:
 
 ## 🖊 Monitoring
 
-- Monitoring tool : [Monitoring Datadog](https://us5.datadoghq.com/dashboard/skm-ajv-35u/-monitoring-tools-project-tasks-management?fromUser=false&refresh_mode=sliding&from_ts=1728733907394&to_ts=1728737507394&live=true)
+- Monitoring tool : [Monitoring Datadog](https://p.us5.datadoghq.com/sb/11f6ed12-8270-11ef-aeeb-36eb61e68aeb-331d24f3a92a1c08a362219c00abb2a1)
 
 ## 🖊 PreRequire
 
