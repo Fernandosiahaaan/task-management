@@ -12,6 +12,7 @@ import (
 	"task-service/internal/model"
 	"task-service/internal/service"
 	"task-service/middleware"
+	"time"
 
 	"github.com/gorilla/mux"
 )
@@ -97,6 +98,7 @@ func (s *TaskHandler) TaskUpdate(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.Atoi(vars["taskId"])
 	if err != nil {
 		model.CreateResponseHttp(w, http.StatusInternalServerError, model.Response{Error: true, Message: "failed task id"})
+		return
 	}
 	task.Id = int64(id)
 
@@ -198,9 +200,38 @@ func (s *TaskHandler) sendDoubleResponse(w http.ResponseWriter, httpStatusCode i
 	messageQueue, err := model.ConvertResponseToStr(response)
 	if err != nil {
 		model.CreateResponseHttp(w, http.StatusInternalServerError, model.Response{Error: true, Message: fmt.Sprintf("failed send message to notification service. err = %s", err.Error())})
+		return
 	}
 	s.rabbitMq.SendMessage(rabbitmq.EXCHANGE_NAME_TaskService, actionRabitMq, messageQueue)
 	model.CreateResponseHttp(w, httpStatusCode, response)
+}
+
+func (s *TaskHandler) TasksUserRead(w http.ResponseWriter, r *http.Request) {
+	var err error
+	w.Header().Set("Content-Type", "application/json")
+
+	vars := mux.Vars(r)
+	userId := vars["userId"]
+	if userId == "" {
+		model.CreateResponseHttp(w, http.StatusInternalServerError, model.Response{Error: true, Message: "failed user id"})
+		return
+	}
+
+	_, err = s.clientGrpc.RequestUserInfo(userId, 1*time.Second)
+	if err != nil {
+		model.CreateResponseHttp(w, http.StatusInternalServerError, model.Response{Error: true, Message: fmt.Sprintf("failed get uuid %s of task from user service. err %v", userId, err)})
+		return
+	}
+
+	tasks, err := s.service.GetTasksByUSerID(userId)
+	if err != nil {
+		model.CreateResponseHttp(w, http.StatusBadRequest, model.Response{Error: true, Message: err.Error()})
+		return
+	} else if tasks == nil {
+		model.CreateResponseHttp(w, http.StatusBadRequest, model.Response{Error: true, Message: fmt.Sprintf("not found task user %s from db", userId)})
+		return
+	}
+	model.CreateResponseHttp(w, http.StatusOK, model.Response{Error: false, Message: fmt.Sprintf("Read Task user id = %s", userId), Data: tasks})
 }
 
 func (s *TaskHandler) Close() {

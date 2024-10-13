@@ -44,6 +44,17 @@ func (s *TaskService) GetTask(id *int64) (*model.Task, error) {
 	return existTask, nil
 }
 
+func (s *TaskService) GetTasksByUSerID(userID string) ([]*model.Task, error) {
+	existTask, err := s.repo.GetAllTaskByUserId(userID)
+	if err != nil {
+		if errors.Is(sql.ErrNoRows, err) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("failed get task user %s from database. err = %s", userID, err.Error())
+	}
+	return existTask, nil
+}
+
 func (s *TaskService) GetAllTask() ([]*model.Task, error) {
 	existTask, err := s.repo.GetAllTask()
 	if err != nil {
@@ -57,6 +68,10 @@ func (s *TaskService) GetAllTask() ([]*model.Task, error) {
 
 func (s *TaskService) CreateNewTask(task *model.Task) (int64, error) {
 	if err := s.validateDueDate(task.DueDate); err != nil {
+		return 0, err
+	}
+
+	if err := s.validateStatus(task.Status); err != nil {
 		return 0, err
 	}
 
@@ -84,6 +99,10 @@ func (s *TaskService) CreateNewTask(task *model.Task) (int64, error) {
 
 func (s *TaskService) UpdateTask(task *model.Task) (*int64, error) {
 	if err := s.validateDueDate(task.DueDate); err != nil {
+		return nil, err
+	}
+
+	if err := s.validateStatus(task.Status); err != nil {
 		return nil, err
 	}
 
@@ -125,6 +144,19 @@ func (s *TaskService) validateDueDate(dueDate time.Time) error {
 		return nil
 	}
 	return fmt.Errorf("due date time has passed.")
+}
+
+func (s *TaskService) validateStatus(status string) error {
+	switch status {
+	case model.StatusDone:
+		return nil
+	case model.StatusInProgress:
+		return nil
+	case model.StatusHold:
+		return nil
+	default:
+		return fmt.Errorf("unknown status %s task", status)
+	}
 }
 
 func (s *TaskService) Close() {

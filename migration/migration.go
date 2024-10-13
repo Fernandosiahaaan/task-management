@@ -27,6 +27,7 @@ func main() {
 		log.Fatalf("failed create migrate instance : %v", err)
 	}
 
+	// sdadsa
 	err = m.Up()
 	if err != nil && err != migrate.ErrNoChange {
 		log.Fatalf("Failed to run migrations: %v", err)

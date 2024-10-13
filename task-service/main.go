@@ -27,12 +27,18 @@ func router(handler *handler.TaskHandler) {
 		json.NewEncoder(w).Encode(map[string]string{"status": "success"})
 	}).Methods("GET")
 
-	router.Use(handler.Midleware.AuthMiddleware)
-	router.HandleFunc("/tasks", handler.TaskReadAll).Methods(http.MethodGet)
-	router.HandleFunc("/tasks", handler.TaskCreate).Methods(http.MethodPost)
-	router.HandleFunc("/tasks/{taskId}", handler.TaskRead).Methods(http.MethodGet)
-	router.HandleFunc("/tasks/{taskId}", handler.TaskUpdate).Methods(http.MethodPut)
-	router.HandleFunc("/tasks/{taskId}", handler.TaskDelete).Methods(http.MethodDelete)
+	// Grup rute yang membutuhkan middleware
+	api := router.PathPrefix("/").Subrouter()
+	api.Use(handler.Midleware.AuthMiddleware)
+
+	// Rute dengan middleware otentikasi
+	api.HandleFunc("/task", handler.TaskCreate).Methods(http.MethodPost)
+	api.HandleFunc("/task/{taskId}", handler.TaskRead).Methods(http.MethodGet)
+	api.HandleFunc("/task/{taskId}", handler.TaskUpdate).Methods(http.MethodPut)
+	api.HandleFunc("/task/{taskId}", handler.TaskDelete).Methods(http.MethodDelete)
+
+	api.HandleFunc("/tasks", handler.TaskReadAll).Methods(http.MethodGet)
+	api.HandleFunc("/tasks/{userId}", handler.TasksUserRead).Methods(http.MethodGet)
 
 	portHttp := os.Getenv("PORT_HTTP")
 	if portHttp == "" {
