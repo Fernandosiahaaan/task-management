@@ -62,10 +62,22 @@ go run .
 
 ## Build Proto for GRPC
 
-```
-cd /task-service/internal/gRPC
-protoc --go_out=./user --go_opt=paths=source_relative ./proto/*.proto
-protoc --go-grpc_out=./user --go-grpc_opt=paths=source_relative ./proto/*.proto
+### User Proto
 
-cp -r /user ../../../user-service/internal/gRRPC/
+```
+cd /task-service/infrastructure/gRPC
+protoc --go_out=./user --go_opt=paths=source_relative ./proto/user.proto
+protoc --go-grpc_out=./user --go-grpc_opt=paths=source_relative ./proto/user.proto
+
+cp -r /user ../../../user-service/infrastructure/gRRPC/
+```
+
+### Logging Proto
+
+```
+cd /task-service/infrastructure/gRPC
+protoc --go_out=./logging --go_opt=paths=source_relative ./proto/log.proto
+protoc --go-grpc_out=./logging --go-grpc_opt=paths=source_relative ./proto/log.proto
+
+cp -r /user ../../../user-service/infrastructure/gRRPC/
 ```

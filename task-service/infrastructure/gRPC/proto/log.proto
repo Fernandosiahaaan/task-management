@@ -1,0 +1,68 @@
+syntax = "proto3";
+
+package logservice;
+
+option go_package = "/logging";  // Tambahkan ini!
+
+
+// Define the gRPC service for logging
+service LogService {
+    // Method for logging events
+    rpc LogTaskAction(LogTaskRequest) returns (LogResponse);
+    rpc LogUserAction(LogUserRequest) returns (LogResponse);
+}
+
+// Enum to define the various actions for task and user logs
+enum TaskAction {
+    CREATE_TASK = 0;
+    UPDATE_TASK = 1;
+    DELETE_TASK = 2;
+}
+
+enum UserAction {
+    LOGIN = 0;
+    LOGOUT = 1;
+    CREATE_USER = 2;
+    UPDATE_USER = 3;
+}
+
+// Request message for logging task-related events
+message LogTaskRequest {
+    string userId = 1;       // ID of the user performing the action
+    string taskId = 2;       // ID of the task being affected
+    TaskAction action = 3;   // The action being logged (create, update, delete)
+    string timestamp = 4;    // Timestamp of when the action happened
+    TaskDetails before = 5;  // Optional: task details before the change (for update)
+    TaskDetails after = 6;   // Optional: task details after the change (for update)
+}
+
+// Message to log details of a task
+message TaskDetails {
+    string title = 1;
+    string description = 2;
+    string dueDate = 3;  // Optional due date for the task
+    string status = 4;   // Status of the task (e.g., pending, completed)
+}
+
+// Request message for logging user-related events
+message LogUserRequest {
+    string userId = 1;       // ID of the user being affected
+    UserAction action = 2;   // The action being logged (login, logout, create, update)
+    string timestamp = 3;    // Timestamp of when the action happened
+    UserDetails before = 4;  // Optional: user details before the change (for update)
+    UserDetails after = 5;   // Optional: user details after the change (for update)
+}
+
+// Message to log details of a user
+message UserDetails {
+    string userId = 1;       // ID of the user
+    string email = 2;        // User email
+    string username = 3;     // Username
+    string fullName = 4;     // Full name of the user
+}
+
+// Response message for both task and user logs
+message LogResponse {
+    bool success = 1;        // Whether the log was successfully recorded
+    string message = 2;      // Additional info or error message
+}

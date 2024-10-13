@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	pb "task-service/infrastructure/gRPC/user"
+	userInfoPB "task-service/infrastructure/gRPC/user"
 
 	"google.golang.org/grpc"
 	grpctrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc"
@@ -20,7 +20,7 @@ type ClientGrpc struct {
 	hostname string
 	ctx      context.Context
 	cancel   context.CancelFunc
-	client   pb.UserServiceClient
+	client   userInfoPB.UserServiceClient
 	conn     *grpc.ClientConn
 }
 
@@ -44,24 +44,23 @@ func ConnectToServerGrpc(param ParamClientGrpc) (*ClientGrpc, error) {
 		return nil, err
 	}
 
-	client.client = pb.NewUserServiceClient(client.conn)
+	client.client = userInfoPB.NewUserServiceClient(client.conn)
 	return client, nil
 }
 
-func (client *ClientGrpc) RequestUserInfo(userId string, timeout time.Duration) (*pb.GetUserResponse, error) {
+func (client *ClientGrpc) RequestUserInfo(userId string, timeout time.Duration) (*userInfoPB.GetUserResponse, error) {
 	// Membuat request ke server
 	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
 	// Panggil RPC GetUser dengan ID user
-	res, err := client.client.GetUser(ctx, &pb.GetUserRequest{UserId: userId})
+	res, err := client.client.GetUser(ctx, &userInfoPB.GetUserRequest{UserId: userId})
 	if err != nil {
 		return nil, fmt.Errorf("Could not get user response. err = %s", err.Error())
 	} else if res.IsError {
 		return nil, fmt.Errorf("%s", res.Message)
 	}
 	return res, nil
-	// fmt.Printf("User ID: %s, Username: %s, Email: %s\n; error = %d; message = %s", res.UserId, res.Username, res.Email, res.IsError, res.Message)
 }
 
 func (client *ClientGrpc) Stop() {

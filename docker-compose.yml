@@ -57,6 +57,37 @@ services:
       MYSQL_PASSWORD: password
     networks:
       - default
+  
+  mongo:
+    image: mongo:latest
+    container_name: mongo
+    platform: linux/amd64
+    ports:
+      - "27017:27017"   
+    volumes:
+      - mongo_data:/data/db  # Volume for persistent data
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin    
+      MONGO_INITDB_ROOT_PASSWORD: password 
+      MONGO_INITDB_DATABASE: task_management_logs
+    networks:
+      - default 
+
+  # Optional: Mongo Express (Web Admin MongoDB)
+  mongo-express:
+    image: mongo-express:latest
+    container_name: mongo-express
+    platform: linux/amd64
+    ports:
+      - "8081:8081"
+    depends_on:
+      - mongo
+    environment:
+      ME_CONFIG_MONGODB_ADMINUSERNAME: admin
+      ME_CONFIG_MONGODB_ADMINPASSWORD: password
+      ME_CONFIG_MONGODB_SERVER: mongo
+    networks:
+      - default
 
   # datadog:
   #   image: "datadog/agent:latest" # Menggunakan image resmi Datadog Agent
@@ -84,3 +115,6 @@ services:
 networks:
   default:
     driver: bridge
+
+volumes:
+  mongo_data:

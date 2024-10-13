@@ -7,6 +7,11 @@ import (
 	"log"
 	"net/http"
 	"os"
+
+	"github.com/gorilla/handlers"
+	"github.com/joho/godotenv"
+	muxtrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/gorilla/mux"
+
 	"task-service/infrastructure/datadog"
 	grpc "task-service/infrastructure/gRPC"
 	"task-service/infrastructure/rabbitmq"
@@ -15,10 +20,6 @@ import (
 	services "task-service/internal/service"
 	"task-service/middleware"
 	"task-service/repository"
-
-	"github.com/gorilla/handlers"
-	"github.com/joho/godotenv"
-	muxtrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/gorilla/mux"
 )
 
 func router(handler *handler.TaskHandler) {
