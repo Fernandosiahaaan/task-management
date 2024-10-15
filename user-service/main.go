@@ -91,17 +91,16 @@ func main() {
 	defer userService.Close()
 	fmt.Println("🔥 Init Service...")
 
-	var paramGrpc grpc.ParamServerGrpc = grpc.ParamServerGrpc{
+	var paramGrpc grpc.ParamGrpc = grpc.ParamGrpc{
 		Ctx:     ctx,
-		Port:    os.Getenv("GRPC_PORT"),
 		Service: userService,
 		Redis:   redis,
 	}
-	serverGrpc, err := grpc.NewConnect(paramGrpc)
+	serverGrpc, err := grpc.NewGrpc(paramGrpc)
 	if err != nil {
 		log.Fatalf("Could not connect to gRPC server. err = %s", err.Error())
 	}
-	go serverGrpc.StartListen()
+	serverGrpc.Start()
 	defer serverGrpc.Close()
 	fmt.Println("🔥 Init gRPC Server...")
 

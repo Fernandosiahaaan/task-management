@@ -20,32 +20,32 @@ import (
 type ParamHandler struct {
 	Service    *service.TaskService
 	Ctx        context.Context
-	ClientGrpc *grpc.ClientGrpc
+	ClientGrpc *grpc.GrpcComm
 	RabbitMq   *rabbitmq.RabbitMq
 	Redis      *reddis.Redis
 	Midleware  *middleware.Middleware
 }
 
 type TaskHandler struct {
-	service    *service.TaskService
-	Ctx        context.Context
-	cancel     context.CancelFunc
-	clientGrpc *grpc.ClientGrpc
-	rabbitMq   *rabbitmq.RabbitMq
-	Redis      *reddis.Redis
-	Midleware  *middleware.Middleware
+	service   *service.TaskService
+	Ctx       context.Context
+	cancel    context.CancelFunc
+	grpcConn  *grpc.GrpcComm
+	rabbitMq  *rabbitmq.RabbitMq
+	Redis     *reddis.Redis
+	Midleware *middleware.Middleware
 }
 
 func NewTaskHandler(param *ParamHandler) *TaskHandler {
 	handlerCtx, handlerCancel := context.WithCancel(param.Ctx)
 	return &TaskHandler{
-		service:    param.Service,
-		Ctx:        handlerCtx,
-		cancel:     handlerCancel,
-		clientGrpc: param.ClientGrpc,
-		rabbitMq:   param.RabbitMq,
-		Redis:      param.Redis,
-		Midleware:  param.Midleware,
+		service:   param.Service,
+		Ctx:       handlerCtx,
+		cancel:    handlerCancel,
+		grpcConn:  param.ClientGrpc,
+		rabbitMq:  param.RabbitMq,
+		Redis:     param.Redis,
+		Midleware: param.Midleware,
 	}
 }
 
@@ -66,7 +66,7 @@ func (s *TaskHandler) TaskCreate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validate UUID of user Assigned & Created User
-	err = s.clientGrpc.ValidateUserUUID(task.AssignedTo, task.CreatedBy)
+	err = s.grpcConn.UserGrpcClient.ValidateUserUUID(task.AssignedTo, task.CreatedBy)
 	if err != nil {
 		model.CreateResponseHttp(w, http.StatusInternalServerError, model.Response{Error: true, Message: err.Error()})
 		return
@@ -108,7 +108,7 @@ func (s *TaskHandler) TaskUpdate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validate UUID of user Assigned & Created User
-	err = s.clientGrpc.ValidateUserUUID(task.AssignedTo, task.UpdatedBy)
+	err = s.grpcConn.UserGrpcClient.ValidateUserUUID(task.AssignedTo, task.UpdatedBy)
 	if err != nil {
 		model.CreateResponseHttp(w, http.StatusInternalServerError, model.Response{Error: true, Message: err.Error()})
 		return
@@ -217,7 +217,7 @@ func (s *TaskHandler) TasksUserRead(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = s.clientGrpc.RequestUserInfo(userId, 1*time.Second)
+	_, err = s.grpcConn.UserGrpcClient.RequestUserInfo(userId, 1*time.Second)
 	if err != nil {
 		model.CreateResponseHttp(w, http.StatusInternalServerError, model.Response{Error: true, Message: fmt.Sprintf("failed get uuid %s of task from user service. err %v", userId, err)})
 		return

@@ -26,29 +26,29 @@ const (
 type ParamHandler struct {
 	Service    *service.UserService
 	Ctx        context.Context
-	GrpcServer *grpc.ServerGrpc
+	GrpcServer *grpc.GrpcComm
 	Redis      *reddis.RedisCln
 	Midleware  *middleware.Midleware
 }
 
 type UserHandler struct {
-	service    *service.UserService
-	Ctx        context.Context
-	cancel     context.CancelFunc
-	grpcServer *grpc.ServerGrpc
-	Redis      *reddis.RedisCln
-	Midleware  *middleware.Midleware
+	service   *service.UserService
+	Ctx       context.Context
+	cancel    context.CancelFunc
+	grpcCom   *grpc.GrpcComm
+	Redis     *reddis.RedisCln
+	Midleware *middleware.Midleware
 }
 
 func NewUserHandler(param ParamHandler) *UserHandler {
 	handlerCtx, handlerCancel := context.WithCancel(param.Ctx)
 	return &UserHandler{
-		service:    param.Service,
-		Ctx:        handlerCtx,
-		cancel:     handlerCancel,
-		grpcServer: param.GrpcServer,
-		Redis:      param.Redis,
-		Midleware:  param.Midleware,
+		service:   param.Service,
+		Ctx:       handlerCtx,
+		cancel:    handlerCancel,
+		grpcCom:   param.GrpcServer,
+		Redis:     param.Redis,
+		Midleware: param.Midleware,
 	}
 }
 

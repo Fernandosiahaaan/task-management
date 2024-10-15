@@ -34,11 +34,12 @@ func Init(ctx context.Context) (*RepoMongo, error) {
 		return nil, fmt.Errorf("failed connect to mongodb. err: %v", err)
 	}
 
-	// // Memeriksa koneksi MongoDB
-	// err = client.Ping(mongoCtx, nil) // Menggunakan ctx yang sama
-	// if err != nil {
-	// 	return nil, fmt.Errorf("failed ping to mongodb. err: %v", err)
-	// }
+	// Memeriksa koneksi MongoDB
+	err = client.Ping(mongoCtx, nil) // Menggunakan ctx yang sama
+	if err != nil {
+		return nil, fmt.Errorf("failed ping to mongodb. err: %v", err)
+	}
+
 	return &RepoMongo{
 		ctx:    mongoCtx,
 		cancel: mongoCancel,

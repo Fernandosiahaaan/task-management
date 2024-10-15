@@ -101,13 +101,12 @@ func main() {
 	defer taskService.Close()
 	fmt.Println("🔥 Init Service...")
 
-	var paramGrpc grpc.ParamClientGrpc = grpc.ParamClientGrpc{
-		Ctx:  ctx,
-		Port: os.Getenv("GRPC_PORT"),
+	var paramGrpc grpc.ParamGrpc = grpc.ParamGrpc{
+		Ctx: ctx,
 	}
-	clientGrpc, err := grpc.ConnectToServerGrpc(paramGrpc)
+	clientGrpc, err := grpc.NewGrpc(paramGrpc)
 	if err != nil {
-		log.Fatalf("Could not connect gRPC client. err = %s", err.Error())
+		log.Fatalf("Could not connect gRPC. err = %s", err.Error())
 	}
 	defer clientGrpc.Close()
 	fmt.Println("🔥 Init gRPC Client...")

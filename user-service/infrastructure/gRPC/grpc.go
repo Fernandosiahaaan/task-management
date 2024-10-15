@@ -3,125 +3,70 @@ package grpc
 import (
 	"context"
 	"fmt"
-	"log"
-	"net"
-	pb "user-service/infrastructure/gRPC/user"
+	"os"
+	loggrpc "user-service/infrastructure/gRPC/logGrpc"
+	usergrpc "user-service/infrastructure/gRPC/userGrpc"
 	"user-service/infrastructure/reddis"
 	"user-service/internal/service"
-
-	"google.golang.org/grpc"
-	grpctrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc"
 )
 
-type ParamServerGrpc struct {
+type ParamGrpc struct {
 	Ctx     context.Context
-	Port    string
 	Service *service.UserService
 	Redis   *reddis.RedisCln
 }
 
-type ServerGrpc struct {
-	ctx                               context.Context
-	cancel                            context.CancelFunc
-	listener                          net.Listener
-	server                            *grpc.Server
-	service                           *service.UserService
-	redis                             *reddis.RedisCln
-	pb.UnimplementedUserServiceServer // Tambahkan ini untuk memastikan implementasi
+type GrpcComm struct {
+	ctx            context.Context
+	cancel         context.CancelFunc
+	Service        *service.UserService
+	Redis          *reddis.RedisCln
+	UserGrpcServer *usergrpc.ServerGrpc
+	LogGrpcClient  *loggrpc.ClientGrpc
 }
 
-// NewConnect initializes the gRPC server connection.
-func NewConnect(param ParamServerGrpc) (*ServerGrpc, error) {
-	var err error
+func NewGrpc(param ParamGrpc) (*GrpcComm, error) {
 	grpcCtx, grpcCancel := context.WithCancel(param.Ctx)
-
-	si := grpctrace.StreamServerInterceptor(grpctrace.WithServiceName("my-grpc-server"))
-	ui := grpctrace.UnaryServerInterceptor(grpctrace.WithServiceName("my-grpc-server"))
-	var client *ServerGrpc = &ServerGrpc{
-		ctx:     grpcCtx,
-		cancel:  grpcCancel,
-		redis:   param.Redis,
-		service: param.Service,
+	portGRPC := os.Getenv("GRPC_PORT")
+	if portGRPC == "" {
+		portGRPC = "50052"
 	}
-	client.listener, err = net.Listen("tcp", fmt.Sprintf(":%s", param.Port))
+
+	userServer, err := usergrpc.NewConnect(usergrpc.ParamServerGrpc{
+		Ctx:     grpcCtx,
+		Port:    portGRPC,
+		Service: param.Service,
+		Redis:   param.Redis,
+	})
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("Could not connect to user-gRPC-server. err = %s", err.Error())
 	}
 
-	// Create gRPC server
-	client.server = grpc.NewServer(grpc.StreamInterceptor(si), grpc.UnaryInterceptor(ui))
-	pb.RegisterUserServiceServer(client.server, client) // Ubah ini menjadi `&client`
-
-	return client, nil
-}
-
-// StartListen starts the gRPC server to listen for incoming requests.
-func (s *ServerGrpc) StartListen() {
-	fmt.Printf("🌐 Server GRPC is running on port %s...\n", s.listener.Addr().String())
-	if err := s.server.Serve(s.listener); err != nil {
-		log.Fatalf("Failed to serve: %v", err)
-	}
-}
-
-// Stop gracefully stops the gRPC server.
-func (s *ServerGrpc) Stop() {
-	s.server.GracefulStop()
-	if s.cancel != nil {
-		s.cancel()
-	}
-	fmt.Println("Server stopped gracefully.")
-}
-
-func (s *ServerGrpc) GetUser(ctx context.Context, req *pb.GetUserRequest) (*pb.GetUserResponse, error) {
-	fmt.Printf("Received request for User ID: %s\n", req.UserId)
-
-	// Attempt to get user info from Redis cache
-	user, err := s.redis.GetUserInfo(req.UserId)
-	if err == nil {
-		// Return successful response if found in Redis
-		return &pb.GetUserResponse{
-			UserId:   req.UserId,
-			Username: user.Username,
-			Email:    user.Email,
-			IsError:  false,
-			Message:  "Successfully retrieved data from Redis cache",
-		}, nil
-	}
-
-	// If Redis fails, fetch the user info from the database via service
-	user, err = s.service.GetUserById(req.UserId)
+	logClient, err := loggrpc.ConnectToServerGrpc(loggrpc.ParamClientGrpc{
+		Ctx:  param.Ctx,
+		Port: portGRPC,
+	})
 	if err != nil {
-		return &pb.GetUserResponse{
-			UserId:   "",
-			Username: "",
-			Email:    "",
-			IsError:  true,
-			Message:  fmt.Sprintf("Failed to retrieve data from user microservice: %s", err.Error()),
-		}, nil
+		return nil, fmt.Errorf("Could not connect gRPC client. err = %s", err.Error())
 	}
 
-	// Handle the case where the user is not found in the database
-	if user == nil {
-		return &pb.GetUserResponse{
-			UserId:   "",
-			Username: "",
-			Email:    "",
-			IsError:  true,
-			Message:  "User ID not found in the database",
-		}, nil
+	var grpc *GrpcComm = &GrpcComm{
+		ctx:            grpcCtx,
+		cancel:         grpcCancel,
+		Service:        param.Service,
+		Redis:          param.Redis,
+		UserGrpcServer: userServer,
+		LogGrpcClient:  logClient,
 	}
-
-	// Return successful response with data from the database
-	return &pb.GetUserResponse{
-		UserId:   req.UserId,
-		Username: user.Username, // Use the user data retrieved from the DB
-		Email:    user.Email,
-		IsError:  false,
-		Message:  "Successfully retrieved data from user microservice",
-	}, nil
+	return grpc, nil
 }
 
-func (s *ServerGrpc) Close() {
-	s.server.Stop()
-	s.cancel()
+func (g *GrpcComm) Start() {
+	go g.UserGrpcServer.StartListen()
+}
+
+func (g *GrpcComm) Close() {
+	g.UserGrpcServer.Close()
+	g.LogGrpcClient.Close()
+	g.cancel()
 }

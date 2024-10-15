@@ -7,6 +7,7 @@ import (
 
 	"github.com/joho/godotenv"
 
+	grpc "log-service/infrastructure/gRPC"
 	"log-service/repository"
 )
 
@@ -27,6 +28,14 @@ func main() {
 	}
 	defer repo.Close()
 	fmt.Println("🔥 Init Repository...")
-	repo.InsertExample()
-	repo.FindExample()
+	// repo.InsertExample()
+	// repo.FindExample()
+
+	logServer, err := grpc.NewConnect(ctx)
+	if err != nil {
+		log.Fatal(err)
+	}
+	defer logServer.Close()
+	fmt.Println("🔥 Init Server Log GRPC...")
+
 }
