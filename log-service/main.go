@@ -35,6 +35,8 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+	logServer.StartListen()
+
 	defer logServer.Close()
 	fmt.Println("🔥 Init Server Log GRPC...")
 

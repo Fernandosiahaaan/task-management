@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 	"log"
-	logPB "log-service/infrastructure/gRPC/logging"
+	logPB "log-service/infrastructure/gRPC/logging/pb"
 	"net"
 	"os"
 
@@ -54,6 +54,15 @@ func (s *ServerGrpc) StartListen() {
 	if err := s.server.Serve(s.listener); err != nil {
 		log.Fatalf("Failed to serve: %v", err)
 	}
+}
+
+func (s *ServerGrpc) LogTaskAction(ctx context.Context, req *logPB.LogTaskRequest) (*logPB.LogResponse, error) {
+	fmt.Printf("received log task id = %d; state = %d", req.TaskId, req.Action)
+
+	return &logPB.LogResponse{
+		Success: true,
+		Message: fmt.Sprintf("success receive task id = %d; action = %s", req.TaskId, req.Action),
+	}, nil
 }
 
 // Stop gracefully stops the gRPC server.

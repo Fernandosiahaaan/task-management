@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"strconv"
 	grpc "task-service/infrastructure/gRPC"
+	"task-service/infrastructure/gRPC/logGrpc/pb"
 	"task-service/infrastructure/rabbitmq"
 	"task-service/infrastructure/reddis"
 	"task-service/internal/model"
@@ -78,10 +79,15 @@ func (s *TaskHandler) TaskCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	task.Id = taskId
-	msg := fmt.Sprintf("successfully created task %d", task.Id)
 
-	var response model.Response = model.Response{Error: false, Message: msg, Data: task}
-	s.sendDoubleResponse(w, http.StatusCreated, rabbitmq.ACTION_TASK_CREATE, response)
+	if err = s.grpcConn.LogGrpcClient.SendTaskToLogging(3*time.Second, &task, task.CreatedBy, pb.TaskAction_CREATE_TASK); err != nil {
+		model.CreateResponseHttp(w, http.StatusInternalServerError, model.Response{Error: true, Message: fmt.Sprintf("failed send task to log service. err = %v", err)})
+		return
+	}
+
+	var response model.Response = model.Response{Error: false, Message: fmt.Sprintf("successfully created task %d", task.Id), Data: task}
+	model.CreateResponseHttp(w, http.StatusBadRequest, response)
+	// s.sendDoubleResponse(w, http.StatusCreated, rabbitmq.ACTION_TASK_CREATE, response)
 }
 
 func (s *TaskHandler) TaskUpdate(w http.ResponseWriter, r *http.Request) {
@@ -120,8 +126,15 @@ func (s *TaskHandler) TaskUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	task.Id = *taskId
-	var response model.Response = model.Response{Error: false, Message: "Task updated", Data: task}
-	s.sendDoubleResponse(w, http.StatusOK, rabbitmq.ACTION_TASK_UPDATE, response)
+
+	if err = s.grpcConn.LogGrpcClient.SendTaskToLogging(3*time.Second, &task, task.UpdatedBy, pb.TaskAction_UPDATE_TASK); err != nil {
+		model.CreateResponseHttp(w, http.StatusInternalServerError, model.Response{Error: true, Message: fmt.Sprintf("failed send task to log service. err = %v", err)})
+		return
+	}
+
+	var response model.Response = model.Response{Error: false, Message: fmt.Sprintf("success update task %d", task.Id), Data: task}
+	model.CreateResponseHttp(w, http.StatusOK, response)
+	// s.sendDoubleResponse(w, http.StatusOK, rabbitmq.ACTION_TASK_UPDATE, response)
 }
 
 func (s *TaskHandler) TaskRead(w http.ResponseWriter, r *http.Request) {
@@ -163,6 +176,7 @@ func (s *TaskHandler) TaskReadAll(w http.ResponseWriter, r *http.Request) {
 
 func (s *TaskHandler) TaskDelete(w http.ResponseWriter, r *http.Request) {
 	var err error
+	tokenStr := r.Context().Value("jwtToken").(string)
 	w.Header().Set("Content-Type", "application/json")
 
 	vars := mux.Vars(r)
@@ -177,8 +191,22 @@ func (s *TaskHandler) TaskDelete(w http.ResponseWriter, r *http.Request) {
 		model.CreateResponseHttp(w, http.StatusBadRequest, model.Response{Error: true, Message: err.Error()})
 		return
 	}
+
+	var task *model.Task = &model.Task{Id: taskId}
+	userLogin, err := s.Redis.GetLoginInfoFromRedis(tokenStr)
+	if err != nil {
+		model.CreateResponseHttp(w, http.StatusInternalServerError, model.Response{Error: true, Message: fmt.Sprintf("failed get user id from redis. err = %v", err)})
+		return
+	}
+
+	if err = s.grpcConn.LogGrpcClient.SendTaskToLogging(3*time.Second, task, userLogin.Id, pb.TaskAction_DELETE_TASK); err != nil {
+		model.CreateResponseHttp(w, http.StatusInternalServerError, model.Response{Error: true, Message: fmt.Sprintf("failed send task to log service. err = %v", err)})
+		return
+	}
+
 	var response model.Response = model.Response{Error: false, Message: fmt.Sprintf("Success Delete Task %d", taskId)}
-	s.sendDoubleResponse(w, http.StatusOK, rabbitmq.ACTION_TASK_DELETE, response)
+	model.CreateResponseHttp(w, http.StatusOK, response)
+	// s.sendDoubleResponse(w, http.StatusOK, rabbitmq.ACTION_TASK_DELETE, response)
 }
 
 // compare user login from jwt with user created/ user updated when update/create task

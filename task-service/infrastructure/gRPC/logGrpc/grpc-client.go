@@ -6,6 +6,7 @@ import (
 	"time"
 
 	logPB "task-service/infrastructure/gRPC/logGrpc/pb"
+	"task-service/internal/model"
 
 	"google.golang.org/grpc"
 	grpctrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc"
@@ -51,4 +52,26 @@ func ConnectToServerGrpc(param ParamClientGrpc) (*ClientGrpc, error) {
 func (client *ClientGrpc) Close() {
 	client.conn.Close()
 	client.cancel()
+}
+
+func (client *ClientGrpc) SendTaskToLogging(timeout time.Duration, task *model.Task, userId string, actionType logPB.TaskAction) error {
+	ctx, cancel := context.WithTimeout(client.ctx, timeout)
+	defer cancel()
+
+	timestamp := time.Now().String()
+	var taskLog *logPB.LogTaskRequest = &logPB.LogTaskRequest{
+		UserId:    userId,
+		TaskId:    task.Id,
+		Action:    actionType,
+		Timestamp: timestamp,
+		After: &logPB.TaskDetails{
+			Title:       task.Title,
+			Description: task.Description,
+			DueDate:     task.DueDate.String(),
+			Status:      task.Status,
+		},
+	}
+	_, err := client.client.LogTaskAction(ctx, taskLog)
+
+	return err
 }

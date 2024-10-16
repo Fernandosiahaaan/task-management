@@ -50,7 +50,7 @@ func ConnectToServerGrpc(param ParamClientGrpc) (*ClientGrpc, error) {
 
 func (client *ClientGrpc) RequestUserInfo(userId string, timeout time.Duration) (*userPB.GetUserResponse, error) {
 	// Membuat request ke server
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	ctx, cancel := context.WithTimeout(client.ctx, timeout)
 	defer cancel()
 
 	// Panggil RPC GetUser dengan ID user
