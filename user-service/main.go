@@ -31,7 +31,7 @@ func router(userHandler *handler.UserHandler) {
 
 	router.HandleFunc("/user", userHandler.UserCreate).Methods(http.MethodPost)
 	router.HandleFunc("/login", userHandler.UserLogin).Methods(http.MethodPost)
-	router.HandleFunc("/user/logout", userHandler.UserLogout).Methods(http.MethodPost)
+	router.Handle("/user/logout", userHandler.Midleware.AuthMiddleware(http.HandlerFunc(userHandler.UserLogout))).Methods(http.MethodPost)
 	router.Handle("/user", userHandler.Midleware.AuthMiddleware(http.HandlerFunc(userHandler.UsersGetAll))).Methods(http.MethodGet)
 	router.Handle("/user/{user_id}", userHandler.Midleware.AuthMiddleware(http.HandlerFunc(userHandler.UserGet))).Methods(http.MethodGet)
 	router.Handle("/user/{user_id}", userHandler.Midleware.AuthMiddleware(http.HandlerFunc(userHandler.UserUpdate))).Methods(http.MethodPut)

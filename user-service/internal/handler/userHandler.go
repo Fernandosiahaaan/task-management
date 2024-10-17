@@ -5,8 +5,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strings"
+	"time"
 	grpc "user-service/infrastructure/gRPC"
+	"user-service/infrastructure/gRPC/logGrpc/pb"
 	"user-service/infrastructure/reddis"
 	"user-service/internal/model"
 	"user-service/internal/service"
@@ -17,10 +18,10 @@ import (
 )
 
 const (
-	MessageFailedToken     string = "Failed Token"
-	MessageFailedRedis     string = "Failed Login Session"
-	MessageFailedJWT       string = "Invalid JWT Token"
-	MessageFailedReqUserId string = "Invalid User ID uri"
+	MessageFailedToken       string = "Failed Token"
+	MessageFailedLoginRedis  string = "Failed Login Session"
+	MessageFailedLogoutRedis string = "Failed Logout Session"
+	MessageFailedReqUserId   string = "Invalid User ID uri"
 )
 
 type ParamHandler struct {
@@ -70,7 +71,14 @@ func (handler *UserHandler) UserCreate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	user.Id = userId
-	model.CreateResponseHttp(w, http.StatusCreated, model.ResponseHttp{Error: false, Message: "User created", Data: user})
+
+	err = handler.grpcCom.LogGrpcClient.SendUserToLogging(3*time.Second, &user, pb.UserAction_CREATE_USER)
+	if err != nil {
+		model.CreateResponseHttp(w, http.StatusInternalServerError, model.ResponseHttp{Error: true, Message: fmt.Sprintf("failed send user '%s' create to log service. err = %v", user.Id, err)})
+		return
+	}
+
+	model.CreateResponseHttp(w, http.StatusCreated, model.ResponseHttp{Error: false, Message: fmt.Sprintf("Success created user %s", user.Id), Data: user})
 }
 
 func (handler *UserHandler) UserLogin(w http.ResponseWriter, r *http.Request) {
@@ -104,6 +112,12 @@ func (handler *UserHandler) UserLogin(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		err = handler.grpcCom.LogGrpcClient.SendUserToLogging(3*time.Second, &user, pb.UserAction_LOGIN)
+		if err != nil {
+			model.CreateResponseHttp(w, http.StatusInternalServerError, model.ResponseHttp{Error: true, Message: fmt.Sprintf("failed send user login '%s' login to log service. err = %v", user.Id, err)})
+			return
+		}
+
 		dataResponse := model.LoginData{Token: tokenString, Id: user.Id}
 		model.CreateResponseHttp(w, http.StatusOK, model.ResponseHttp{Error: false, Message: "Success login", Data: dataResponse})
 		return
@@ -114,26 +128,27 @@ func (handler *UserHandler) UserLogin(w http.ResponseWriter, r *http.Request) {
 
 func (handler *UserHandler) UserLogout(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	authToken := r.Header.Get("Authorization")
-	if authToken == "" {
-		model.CreateResponseHttp(w, http.StatusUnauthorized, model.ResponseHttp{Error: true, Message: "Authentication header null"})
-		return
-	}
 
-	bearerToken := strings.Split(authToken, " ")
-	if len(bearerToken) != 2 {
-		model.CreateResponseHttp(w, http.StatusUnauthorized, model.ResponseHttp{Error: true, Message: "Invalid format token"})
-		return
-	}
-
-	jwtToken := bearerToken[1]
-	_, err := handler.Midleware.VerifyToken(jwtToken)
+	tokenStr := r.Context().Value("jwtToken").(string)
+	// get login info from redis
+	loginInfo, err := handler.Redis.GetLoginInfo(tokenStr)
 	if err != nil {
-		model.CreateResponseHttp(w, http.StatusUnauthorized, model.ResponseHttp{Error: true, Message: fmt.Sprintf("%s; err = %s", MessageFailedToken, err)})
+		model.CreateResponseHttp(w, http.StatusInternalServerError, model.ResponseHttp{Error: true, Message: fmt.Sprintf("%s. Err = %s", MessageFailedLogoutRedis, err)})
+		return
+	}
+	user, err := handler.Redis.GetUserInfo(loginInfo.Id)
+	if err != nil {
+		model.CreateResponseHttp(w, http.StatusInternalServerError, model.ResponseHttp{Error: true, Message: fmt.Sprintf("%s. Err = %s", MessageFailedLogoutRedis, err)})
 		return
 	}
 
-	err = handler.Redis.DeleteLoginInfo(jwtToken)
+	err = handler.grpcCom.LogGrpcClient.SendUserToLogging(3*time.Second, user, pb.UserAction_LOGOUT)
+	if err != nil {
+		model.CreateResponseHttp(w, http.StatusInternalServerError, model.ResponseHttp{Error: true, Message: fmt.Sprintf("failed send user '%s' logout to log service. err = %v", user.Id, err)})
+		return
+	}
+
+	err = handler.Redis.DeleteLoginInfo(tokenStr)
 	if err != nil {
 		model.CreateResponseHttp(w, http.StatusInternalServerError, model.ResponseHttp{Error: true, Message: "Failed logout session"})
 		return
@@ -150,7 +165,7 @@ func (handler *UserHandler) UserGet(w http.ResponseWriter, r *http.Request) {
 	// get login info from redis
 	loginInfo, err := handler.Redis.GetLoginInfo(tokenStr)
 	if err != nil {
-		model.CreateResponseHttp(w, http.StatusBadRequest, model.ResponseHttp{Error: true, Message: fmt.Sprintf("%s. Err = %s", MessageFailedRedis, err)})
+		model.CreateResponseHttp(w, http.StatusBadRequest, model.ResponseHttp{Error: true, Message: fmt.Sprintf("%s. Err = %s", MessageFailedLoginRedis, err)})
 		return
 	}
 
@@ -184,7 +199,7 @@ func (handler *UserHandler) UserUpdate(w http.ResponseWriter, r *http.Request) {
 	// get login info from redis
 	loginInfo, err := handler.Redis.GetLoginInfo(tokenStr)
 	if err != nil {
-		model.CreateResponseHttp(w, http.StatusBadRequest, model.ResponseHttp{Error: true, Message: fmt.Sprintf("%s. Err = %s", MessageFailedRedis, err)})
+		model.CreateResponseHttp(w, http.StatusBadRequest, model.ResponseHttp{Error: true, Message: fmt.Sprintf("%s. Err = %s", MessageFailedLoginRedis, err)})
 		return
 	}
 
@@ -217,6 +232,12 @@ func (handler *UserHandler) UserUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	err = handler.grpcCom.LogGrpcClient.SendUserToLogging(3*time.Second, &userUpdated, pb.UserAction_UPDATE_USER)
+	if err != nil {
+		model.CreateResponseHttp(w, http.StatusInternalServerError, model.ResponseHttp{Error: true, Message: fmt.Sprintf("failed send user '%s' updated to log service. err = %v", userUpdated.Id, err)})
+		return
+	}
+
 	model.CreateResponseHttp(w, http.StatusOK, model.ResponseHttp{Error: false, Message: "success update user", Data: userUpdated})
 }
 
@@ -246,7 +267,7 @@ func (handler *UserHandler) UsersGetAll(w http.ResponseWriter, r *http.Request) 
 	// get login info from redis
 	_, err := handler.Redis.GetLoginInfo(tokenStr)
 	if err != nil {
-		model.CreateResponseHttp(w, http.StatusBadRequest, model.ResponseHttp{Error: true, Message: fmt.Sprintf("%s. Err = %s", MessageFailedRedis, err)})
+		model.CreateResponseHttp(w, http.StatusBadRequest, model.ResponseHttp{Error: true, Message: fmt.Sprintf("%s. Err = %s", MessageFailedLoginRedis, err)})
 		return
 	}
 	// get user from db

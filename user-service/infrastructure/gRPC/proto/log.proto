@@ -29,7 +29,7 @@ enum UserAction {
 // Request message for logging task-related events
 message LogTaskRequest {
     string userId = 1;       // ID of the user performing the action
-    string taskId = 2;       // ID of the task being affected
+    int64 taskId = 2;       // ID of the task being affected
     TaskAction action = 3;   // The action being logged (create, update, delete)
     string timestamp = 4;    // Timestamp of when the action happened
     TaskDetails before = 5;  // Optional: task details before the change (for update)
@@ -58,7 +58,7 @@ message UserDetails {
     string userId = 1;       // ID of the user
     string email = 2;        // User email
     string username = 3;     // Username
-    string fullName = 4;     // Full name of the user
+    string role = 4;         // role of the user
 }
 
 // Response message for both task and user logs

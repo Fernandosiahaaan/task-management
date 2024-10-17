@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 	logPB "user-service/infrastructure/gRPC/logGrpc/pb"
+	"user-service/internal/model"
 
 	"google.golang.org/grpc"
 	grpctrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc"
@@ -45,6 +46,27 @@ func ConnectToServerGrpc(param ParamClientGrpc) (*ClientGrpc, error) {
 
 	client.client = logPB.NewLogServiceClient(client.conn)
 	return client, nil
+}
+
+func (client *ClientGrpc) SendUserToLogging(timeout time.Duration, user *model.User, actionType logPB.UserAction) error {
+	ctx, cancel := context.WithTimeout(client.ctx, timeout)
+	defer cancel()
+
+	timestamp := time.Now().String()
+	var userLog *logPB.LogUserRequest = &logPB.LogUserRequest{
+		UserId:    user.Id,
+		Action:    actionType,
+		Timestamp: timestamp,
+		After: &logPB.UserDetails{
+			UserId:   user.Id,
+			Email:    user.Email,
+			Username: user.Username,
+			Role:     user.Role,
+		},
+	}
+	_, err := client.client.LogUserAction(ctx, userLog)
+
+	return err
 }
 
 func (client *ClientGrpc) Close() {

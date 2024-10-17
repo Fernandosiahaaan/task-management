@@ -58,7 +58,7 @@ message UserDetails {
     string userId = 1;       // ID of the user
     string email = 2;        // User email
     string username = 3;     // Username
-    string fullName = 4;     // Full name of the user
+    string role = 4;         // role of the user
 }
 
 // Response message for both task and user logs

@@ -65,6 +65,15 @@ func (s *ServerGrpc) LogTaskAction(ctx context.Context, req *logPB.LogTaskReques
 	}, nil
 }
 
+func (s *ServerGrpc) LogUserAction(ctx context.Context, req *logPB.LogUserRequest) (*logPB.LogResponse, error) {
+	fmt.Printf("received log user id = '%s'; state = %d\n", req.UserId, req.Action)
+
+	return &logPB.LogResponse{
+		Success: true,
+		Message: fmt.Sprintf("success receive user id = '%s'; action = %s", req.UserId, req.Action),
+	}, nil
+}
+
 // Stop gracefully stops the gRPC server.
 func (s *ServerGrpc) Close() {
 	s.server.GracefulStop()

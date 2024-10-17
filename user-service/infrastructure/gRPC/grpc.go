@@ -27,14 +27,14 @@ type GrpcComm struct {
 
 func NewGrpc(param ParamGrpc) (*GrpcComm, error) {
 	grpcCtx, grpcCancel := context.WithCancel(param.Ctx)
-	portGRPC := os.Getenv("GRPC_PORT")
-	if portGRPC == "" {
-		portGRPC = "50052"
+	userPortGRPC := os.Getenv("GRPC_PORT")
+	if userPortGRPC == "" {
+		userPortGRPC = "50052"
 	}
 
 	userServer, err := usergrpc.NewConnect(usergrpc.ParamServerGrpc{
 		Ctx:     grpcCtx,
-		Port:    portGRPC,
+		Port:    userPortGRPC,
 		Service: param.Service,
 		Redis:   param.Redis,
 	})
@@ -42,9 +42,13 @@ func NewGrpc(param ParamGrpc) (*GrpcComm, error) {
 		return nil, fmt.Errorf("Could not connect to user-gRPC-server. err = %s", err.Error())
 	}
 
+	logPortGRPC := os.Getenv("GRPC_LOG_PORT")
+	if logPortGRPC == "" {
+		logPortGRPC = "50053"
+	}
 	logClient, err := loggrpc.ConnectToServerGrpc(loggrpc.ParamClientGrpc{
 		Ctx:  param.Ctx,
-		Port: portGRPC,
+		Port: logPortGRPC,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("Could not connect gRPC client. err = %s", err.Error())
