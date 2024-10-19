@@ -28,10 +28,8 @@ func main() {
 	}
 	defer repo.Close()
 	fmt.Println("🔥 Init Repository...")
-	// repo.InsertExample()
-	// repo.FindExample()
 
-	logServer, err := grpc.NewConnect(ctx)
+	logServer, err := grpc.NewConnect(ctx, repo)
 	if err != nil {
 		log.Fatal(err)
 	}

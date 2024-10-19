@@ -52,7 +52,7 @@ func (client *ClientGrpc) SendUserToLogging(timeout time.Duration, user *model.U
 	ctx, cancel := context.WithTimeout(client.ctx, timeout)
 	defer cancel()
 
-	timestamp := time.Now().String()
+	timestamp := time.Now().Format("2006-01-02 15:04:05")
 	var userLog *logPB.LogUserRequest = &logPB.LogUserRequest{
 		UserId:    user.Id,
 		Action:    actionType,
@@ -64,7 +64,10 @@ func (client *ClientGrpc) SendUserToLogging(timeout time.Duration, user *model.U
 			Role:     user.Role,
 		},
 	}
-	_, err := client.client.LogUserAction(ctx, userLog)
+	response, err := client.client.LogUserAction(ctx, userLog)
+	if err != nil {
+		fmt.Println("failed response from log service = ", response)
+	}
 
 	return err
 }

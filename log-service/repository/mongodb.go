@@ -8,14 +8,23 @@ import (
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
 
+const (
+	DB_NAME          = "log-service-db"
+	UserCollectionDB = "user-log"
+	TaskCollectionDB = "task-log"
+)
+
 type RepoMongo struct {
-	ctx    context.Context
-	cancel context.CancelFunc
-	Conn   *mongo.Client
+	ctx            context.Context
+	cancel         context.CancelFunc
+	Conn           *mongo.Client
+	userCollection *mongo.Collection
+	taskCollection *mongo.Collection
 }
 
 func Init(ctx context.Context) (*RepoMongo, error) {
@@ -40,17 +49,28 @@ func Init(ctx context.Context) (*RepoMongo, error) {
 		return nil, fmt.Errorf("failed ping to mongodb. err: %v", err)
 	}
 
+	userCollection := client.Database(DB_NAME).Collection(UserCollectionDB)
+	taskCollection := client.Database(DB_NAME).Collection(TaskCollectionDB)
+
+	if err = addUserActionValidator(mongoCtx, client, DB_NAME, UserCollectionDB); err != nil {
+		return nil, fmt.Errorf("failed to add validator to collection %s. err = %v", UserCollectionDB, err)
+	}
+
+	if err = addTaskCollectionValidator(mongoCtx, client, DB_NAME, TaskCollectionDB); err != nil {
+		return nil, fmt.Errorf("failed to add validator to collection %s. err = %v", TaskCollectionDB, err)
+	}
+
 	return &RepoMongo{
-		ctx:    mongoCtx,
-		cancel: mongoCancel,
-		Conn:   client,
+		ctx:            mongoCtx,
+		cancel:         mongoCancel,
+		Conn:           client,
+		userCollection: userCollection,
+		taskCollection: taskCollection,
 	}, nil
 }
 
 // Contoh insert dokumen ke MongoDB
 func (r *RepoMongo) InsertExample() {
-	collection := r.Conn.Database("mydb").Collection("users")
-
 	ctx, cancel := context.WithTimeout(r.ctx, 5*time.Second)
 	defer cancel()
 
@@ -62,7 +82,7 @@ func (r *RepoMongo) InsertExample() {
 	}
 
 	// Insert ke koleksi
-	result, err := collection.InsertOne(ctx, user)
+	result, err := r.userCollection.InsertOne(ctx, user)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -72,7 +92,7 @@ func (r *RepoMongo) InsertExample() {
 
 // Contoh query sederhana untuk mencari dokumen
 func (r *RepoMongo) FindExample() {
-	collection := r.Conn.Database("mydb").Collection("users")
+	collection := r.Conn.Database(DB_NAME).Collection("users")
 
 	ctx, cancel := context.WithTimeout(r.ctx, 5*time.Second)
 	defer cancel()
@@ -88,6 +108,24 @@ func (r *RepoMongo) FindExample() {
 	}
 
 	fmt.Println("Dokumen ditemukan:", result)
+}
+
+// Contoh query sederhana untuk mencari dokumen
+func (r *RepoMongo) InsertUserLog(input primitive.M) (*mongo.InsertOneResult, error) {
+	ctx, cancel := context.WithTimeout(r.ctx, 5*time.Second)
+	defer cancel()
+
+	// Menjalankan query find
+	return r.userCollection.InsertOne(ctx, input)
+}
+
+// Contoh query sederhana untuk mencari dokumen
+func (r *RepoMongo) InsertTaskLog(input primitive.M) (*mongo.InsertOneResult, error) {
+	ctx, cancel := context.WithTimeout(r.ctx, 5*time.Second)
+	defer cancel()
+
+	// Menjalankan query find
+	return r.taskCollection.InsertOne(ctx, input)
 }
 
 func (r *RepoMongo) Close() {

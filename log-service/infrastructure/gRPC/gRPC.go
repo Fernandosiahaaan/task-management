@@ -5,9 +5,11 @@ import (
 	"fmt"
 	"log"
 	logPB "log-service/infrastructure/gRPC/logging/pb"
+	"log-service/repository"
 	"net"
 	"os"
 
+	"go.mongodb.org/mongo-driver/bson"
 	"google.golang.org/grpc"
 	grpctrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/google.golang.org/grpc"
 )
@@ -17,11 +19,12 @@ type ServerGrpc struct {
 	cancel   context.CancelFunc
 	listener net.Listener
 	server   *grpc.Server
+	repo     *repository.RepoMongo
 	logPB.UnimplementedLogServiceServer
 }
 
 // NewConnect initializes the gRPC server connection.
-func NewConnect(ctx context.Context) (*ServerGrpc, error) {
+func NewConnect(ctx context.Context, repo *repository.RepoMongo) (*ServerGrpc, error) {
 	var err error
 	grpcCtx, grpcCancel := context.WithCancel(ctx)
 
@@ -30,6 +33,7 @@ func NewConnect(ctx context.Context) (*ServerGrpc, error) {
 	var client *ServerGrpc = &ServerGrpc{
 		ctx:    grpcCtx,
 		cancel: grpcCancel,
+		repo:   repo,
 	}
 
 	portGRPC := os.Getenv("GRPC_PORT")
@@ -57,20 +61,54 @@ func (s *ServerGrpc) StartListen() {
 }
 
 func (s *ServerGrpc) LogTaskAction(ctx context.Context, req *logPB.LogTaskRequest) (*logPB.LogResponse, error) {
-	fmt.Printf("received log task id = %d; state = %d", req.TaskId, req.Action)
+	fmt.Printf("received log task id = %d; state = %s", req.TaskId, req.Action.String())
 
+	logEntry := bson.M{
+		"timestamp": req.Timestamp,
+		"action":    req.Action.String(),
+		"userId":    req.UserId,
+		"taskId":    req.TaskId,
+		"before":    req.Before,
+		"after":     req.After,
+	}
+	result, err := s.repo.InsertTaskLog(logEntry)
+	if err != nil {
+		return &logPB.LogResponse{
+			Success: false,
+			Message: fmt.Sprintf("failed save to log task id = '%s'; action = %s", req.UserId, req.Action.String()),
+		}, err
+	}
+
+	fmt.Println("result log task to mongo db = ", result)
 	return &logPB.LogResponse{
 		Success: true,
-		Message: fmt.Sprintf("success receive task id = %d; action = %s", req.TaskId, req.Action),
+		Message: fmt.Sprintf("success receive task id = %d; action = %s", req.TaskId, req.Action.String()),
 	}, nil
 }
 
 func (s *ServerGrpc) LogUserAction(ctx context.Context, req *logPB.LogUserRequest) (*logPB.LogResponse, error) {
-	fmt.Printf("received log user id = '%s'; state = %d\n", req.UserId, req.Action)
+	fmt.Printf("received log user id = '%s'; state = %s\n", req.UserId, req.Action.String())
+
+	logEntry := bson.M{
+		"timestamp": req.Timestamp,
+		"action":    req.Action.String(),
+		"userId":    req.UserId,
+		"before":    req.Before,
+		"after":     req.After,
+	}
+	result, err := s.repo.InsertUserLog(logEntry)
+	if err != nil {
+		return &logPB.LogResponse{
+			Success: false,
+			Message: fmt.Sprintf("failed save to log user id = '%s'; action = %s", req.UserId, req.Action.String()),
+		}, err
+	}
+
+	fmt.Println("result log user to mongo db = ", result)
 
 	return &logPB.LogResponse{
 		Success: true,
-		Message: fmt.Sprintf("success receive user id = '%s'; action = %s", req.UserId, req.Action),
+		Message: fmt.Sprintf("success save to log user id = '%s'; action = %s", req.UserId, req.Action.String()),
 	}, nil
 }
 
