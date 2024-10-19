@@ -72,6 +72,7 @@ func main() {
 
 	datadog.Init()
 	defer datadog.Close()
+	fmt.Println("🔥 Init Datadog...")
 
 	repo, err := repository.NewuserRepository(ctx)
 	if err != nil {

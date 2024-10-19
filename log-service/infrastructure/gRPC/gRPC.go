@@ -61,7 +61,7 @@ func (s *ServerGrpc) StartListen() {
 }
 
 func (s *ServerGrpc) LogTaskAction(ctx context.Context, req *logPB.LogTaskRequest) (*logPB.LogResponse, error) {
-	fmt.Printf("received log task id = %d; state = %s", req.TaskId, req.Action.String())
+	fmt.Printf("received log task id = %d; state = %s\n", req.TaskId, req.Action.String())
 
 	logEntry := bson.M{
 		"timestamp": req.Timestamp,
@@ -71,7 +71,7 @@ func (s *ServerGrpc) LogTaskAction(ctx context.Context, req *logPB.LogTaskReques
 		"before":    req.Before,
 		"after":     req.After,
 	}
-	result, err := s.repo.InsertTaskLog(logEntry)
+	_, err := s.repo.InsertTaskLog(logEntry)
 	if err != nil {
 		return &logPB.LogResponse{
 			Success: false,
@@ -79,7 +79,6 @@ func (s *ServerGrpc) LogTaskAction(ctx context.Context, req *logPB.LogTaskReques
 		}, err
 	}
 
-	fmt.Println("result log task to mongo db = ", result)
 	return &logPB.LogResponse{
 		Success: true,
 		Message: fmt.Sprintf("success receive task id = %d; action = %s", req.TaskId, req.Action.String()),
@@ -96,15 +95,13 @@ func (s *ServerGrpc) LogUserAction(ctx context.Context, req *logPB.LogUserReques
 		"before":    req.Before,
 		"after":     req.After,
 	}
-	result, err := s.repo.InsertUserLog(logEntry)
+	_, err := s.repo.InsertUserLog(logEntry)
 	if err != nil {
 		return &logPB.LogResponse{
 			Success: false,
 			Message: fmt.Sprintf("failed save to log user id = '%s'; action = %s", req.UserId, req.Action.String()),
 		}, err
 	}
-
-	fmt.Println("result log user to mongo db = ", result)
 
 	return &logPB.LogResponse{
 		Success: true,

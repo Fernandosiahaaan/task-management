@@ -2,20 +2,34 @@
 
 ## 🖊 Overview
 
-Collaborative Task Management System is a platform designed to help users efficiently manage their tasks, whether for personal use or in a team context. This system allows users to create, track, update, and delete tasks in real-time, as well as provides collaboration capabilities among team members, including real-time notifications, task reminders, and activity logging.
-The development utilizes several tech stacks, such as:
+**Collaborative Task Management System** is a platform designed to help users efficiently manage their tasks, whether for personal use or in a team context. This system allows users to create, track, update, and delete tasks in real-time, as well as provides collaboration capabilities among team members, including real-time notifications, task reminders, and activity logging.
 
-- Golang + Framework gorilla mux
-- Microservice (user service, task service, log service, notification service).
-- Clean architecture
-- JWT Token Auth
-- Redis caching data -> for caching data
-- RabbitMq message queue -> message queue for async communication microservice
-- gRPC synchronuis message (Google Remote Procedure Call) -> for sync communication microservice
-- PostgreeDB Database (SQL DB) -> for task, and user microservice DB
-- MongoDB Database (No SQL DB) -> for logging microservice DB (in progress)
-- Docker containers-> for setup env & bundling all stack tech
-- DataDog Monitoring tool
+## Features
+
+- Task creation, tracking, updating, and deletion in real-time
+- Collaboration among team members
+- Real-time notifications
+- Task reminders
+- Activity logging
+
+## Tech Stack and Architecture
+
+This project utilizes several modern technologies and follows a clean architecture approach to ensure scalability, maintainability, and ease of development.
+
+| Technology/Tool        | Purpose                                               | Status |
+| ---------------------- | ----------------------------------------------------- | ------ |
+| **Golang**             | Core language for the back-end services               | ✅     |
+| **Gorilla Mux**        | HTTP router for handling requests                     | ✅     |
+| **Microservices**      | Independent services (User, Task, Log, Notification)  | ✅     |
+| **Clean Architecture** | Layered design for maintainability                    | ✅     |
+| **JWT Token Auth**     | Authentication and Authorization                      | ✅     |
+| **Redis**              | Caching layer for improving performance               | ✅     |
+| **RabbitMQ**           | Message queue for asynchronous communication          | ✅     |
+| **gRPC**               | Synchronous communication between microservices       | ✅     |
+| **PostgreSQL**         | SQL database for task and user services               | ✅     |
+| **MongoDB**            | NoSQL database for logging service (in progress)      | ✅     |
+| **Docker**             | Containerization for setup and environment management | ✅     |
+| **DataDog**            | Monitoring and observability tool                     | ✅     |
 
 ## 🖊 Documentation
 

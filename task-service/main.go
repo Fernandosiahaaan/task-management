@@ -75,6 +75,7 @@ func main() {
 
 	datadog.Init()
 	defer datadog.Close()
+	fmt.Println("🔥 Init Datadog...")
 
 	repo, err := repository.NewTaskRepository(ctx)
 	if err != nil {

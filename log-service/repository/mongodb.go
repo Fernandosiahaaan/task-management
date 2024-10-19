@@ -11,6 +11,7 @@ import (
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
+	mongotrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/go.mongodb.org/mongo-driver/mongo"
 )
 
 const (
@@ -37,14 +38,19 @@ func Init(ctx context.Context) (*RepoMongo, error) {
 	fmt.Println("urlMongoDB = ", urlMongoDB)
 
 	// Membuat client MongoDB
-	client, err := mongo.NewClient(options.Client().ApplyURI(urlMongoDB))
+	opts := options.Client().ApplyURI(urlMongoDB)
+	opts.Monitor = mongotrace.NewMonitor()
+	client, err := mongo.NewClient(opts)
+	if err != nil {
+		return nil, fmt.Errorf("failed create new client to mongodb. err: %v", err)
+	}
+
 	err = client.Connect(mongoCtx)
 	if err != nil {
 		return nil, fmt.Errorf("failed connect to mongodb. err: %v", err)
 	}
 
-	// Memeriksa koneksi MongoDB
-	err = client.Ping(mongoCtx, nil) // Menggunakan ctx yang sama
+	err = client.Ping(mongoCtx, nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed ping to mongodb. err: %v", err)
 	}
@@ -69,27 +75,6 @@ func Init(ctx context.Context) (*RepoMongo, error) {
 	}, nil
 }
 
-// Contoh insert dokumen ke MongoDB
-func (r *RepoMongo) InsertExample() {
-	ctx, cancel := context.WithTimeout(r.ctx, 5*time.Second)
-	defer cancel()
-
-	// Data yang akan diinsert
-	user := bson.D{
-		{Key: "name", Value: "John Doe"},
-		{Key: "age", Value: 30},
-		{Key: "email", Value: "johndoe@example.com"},
-	}
-
-	// Insert ke koleksi
-	result, err := r.userCollection.InsertOne(ctx, user)
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Println("Dokumen berhasil diinsert dengan ID:", result.InsertedID)
-}
-
 // Contoh query sederhana untuk mencari dokumen
 func (r *RepoMongo) FindExample() {
 	collection := r.Conn.Database(DB_NAME).Collection("users")
@@ -110,21 +95,17 @@ func (r *RepoMongo) FindExample() {
 	fmt.Println("Dokumen ditemukan:", result)
 }
 
-// Contoh query sederhana untuk mencari dokumen
 func (r *RepoMongo) InsertUserLog(input primitive.M) (*mongo.InsertOneResult, error) {
 	ctx, cancel := context.WithTimeout(r.ctx, 5*time.Second)
 	defer cancel()
 
-	// Menjalankan query find
 	return r.userCollection.InsertOne(ctx, input)
 }
 
-// Contoh query sederhana untuk mencari dokumen
 func (r *RepoMongo) InsertTaskLog(input primitive.M) (*mongo.InsertOneResult, error) {
 	ctx, cancel := context.WithTimeout(r.ctx, 5*time.Second)
 	defer cancel()
 
-	// Menjalankan query find
 	return r.taskCollection.InsertOne(ctx, input)
 }
 

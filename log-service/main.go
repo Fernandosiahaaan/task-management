@@ -7,6 +7,7 @@ import (
 
 	"github.com/joho/godotenv"
 
+	"log-service/infrastructure/datadog"
 	grpc "log-service/infrastructure/gRPC"
 	"log-service/repository"
 )
@@ -21,6 +22,10 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error loading .env file")
 	}
+
+	datadog.Init()
+	defer datadog.Close()
+	fmt.Println("🔥 Init Datadog...")
 
 	repo, err := repository.Init(ctx)
 	if err != nil {
@@ -37,5 +42,4 @@ func main() {
 
 	defer logServer.Close()
 	fmt.Println("🔥 Init Server Log GRPC...")
-
 }
