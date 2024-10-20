@@ -71,6 +71,7 @@ func (client *ClientGrpc) SendTaskToLogging(timeout time.Duration, task *model.T
 			Status:      task.Status,
 		},
 	}
+
 	response, err := client.client.LogTaskAction(ctx, taskLog)
 	if err != nil {
 		fmt.Println("failed response from log service = ", response)

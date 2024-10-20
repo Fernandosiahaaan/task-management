@@ -72,11 +72,11 @@ func (handler *UserHandler) UserCreate(w http.ResponseWriter, r *http.Request) {
 	}
 	user.Id = userId
 
-	err = handler.grpcCom.LogGrpcClient.SendUserToLogging(3*time.Second, &user, pb.UserAction_CREATE_USER)
-	if err != nil {
-		model.CreateResponseHttp(w, http.StatusInternalServerError, model.ResponseHttp{Error: true, Message: fmt.Sprintf("failed send user '%s' create to log service. err = %v", user.Id, err)})
-		return
-	}
+	go handler.grpcCom.LogGrpcClient.SendUserToLogging(3*time.Second, &user, pb.UserAction_CREATE_USER)
+	// if err != nil {
+	// 	model.CreateResponseHttp(w, http.StatusInternalServerError, model.ResponseHttp{Error: true, Message: fmt.Sprintf("failed send user '%s' create to log service. err = %v", user.Id, err)})
+	// 	return
+	// }
 
 	model.CreateResponseHttp(w, http.StatusCreated, model.ResponseHttp{Error: false, Message: fmt.Sprintf("Success created user %s", user.Id), Data: user})
 }
@@ -112,11 +112,11 @@ func (handler *UserHandler) UserLogin(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		err = handler.grpcCom.LogGrpcClient.SendUserToLogging(3*time.Second, &user, pb.UserAction_LOGIN)
-		if err != nil {
-			model.CreateResponseHttp(w, http.StatusInternalServerError, model.ResponseHttp{Error: true, Message: fmt.Sprintf("failed send user login '%s' login to log service. err = %v", user.Id, err)})
-			return
-		}
+		go handler.grpcCom.LogGrpcClient.SendUserToLogging(3*time.Second, &user, pb.UserAction_LOGIN)
+		// if err != nil {
+		// 	model.CreateResponseHttp(w, http.StatusInternalServerError, model.ResponseHttp{Error: true, Message: fmt.Sprintf("failed send user login '%s' login to log service. err = %v", user.Id, err)})
+		// 	return
+		// }
 
 		dataResponse := model.LoginData{Token: tokenString, Id: user.Id}
 		model.CreateResponseHttp(w, http.StatusOK, model.ResponseHttp{Error: false, Message: "Success login", Data: dataResponse})
@@ -142,11 +142,11 @@ func (handler *UserHandler) UserLogout(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = handler.grpcCom.LogGrpcClient.SendUserToLogging(3*time.Second, user, pb.UserAction_LOGOUT)
-	if err != nil {
-		model.CreateResponseHttp(w, http.StatusInternalServerError, model.ResponseHttp{Error: true, Message: fmt.Sprintf("failed send user '%s' logout to log service. err = %v", user.Id, err)})
-		return
-	}
+	go handler.grpcCom.LogGrpcClient.SendUserToLogging(3*time.Second, user, pb.UserAction_LOGOUT)
+	// if err != nil {
+	// 	model.CreateResponseHttp(w, http.StatusInternalServerError, model.ResponseHttp{Error: true, Message: fmt.Sprintf("failed send user '%s' logout to log service. err = %v", user.Id, err)})
+	// 	return
+	// }
 
 	err = handler.Redis.DeleteLoginInfo(tokenStr)
 	if err != nil {
@@ -232,11 +232,11 @@ func (handler *UserHandler) UserUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = handler.grpcCom.LogGrpcClient.SendUserToLogging(3*time.Second, &userUpdated, pb.UserAction_UPDATE_USER)
-	if err != nil {
-		model.CreateResponseHttp(w, http.StatusInternalServerError, model.ResponseHttp{Error: true, Message: fmt.Sprintf("failed send user '%s' updated to log service. err = %v", userUpdated.Id, err)})
-		return
-	}
+	go handler.grpcCom.LogGrpcClient.SendUserToLogging(3*time.Second, &userUpdated, pb.UserAction_UPDATE_USER)
+	// if err != nil {
+	// 	model.CreateResponseHttp(w, http.StatusInternalServerError, model.ResponseHttp{Error: true, Message: fmt.Sprintf("failed send user '%s' updated to log service. err = %v", userUpdated.Id, err)})
+	// 	return
+	// }
 
 	model.CreateResponseHttp(w, http.StatusOK, model.ResponseHttp{Error: false, Message: "success update user", Data: userUpdated})
 }

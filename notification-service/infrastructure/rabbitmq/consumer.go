@@ -4,20 +4,10 @@ import (
 	"fmt"
 	"log"
 	"notification-service/internal/mail"
+	"notification-service/internal/model"
 	"os"
 
 	"github.com/streadway/amqp"
-)
-
-const (
-	EXCHANGE_NAME_TaskService string = "task-service"
-)
-
-const (
-	ACTION_TASK_CREATE = "task.create"
-	ACTION_TASK_READ   = "task.read"
-	ACTION_TASK_UPDATE = "task.update"
-	ACTION_TASK_DELETE = "task.delete"
 )
 
 type rabbitMq struct {
@@ -79,9 +69,9 @@ func (r *rabbitMq) ReceiveMessage() {
 
 	// Bind the queue to the topic exchange and use routing key pattern "tas.*"
 	err = channel.QueueBind(
-		queue.Name,                // queue name
-		"task.*",                  // routing key pattern (task.create, task.update, etc.)
-		EXCHANGE_NAME_TaskService, // exchange name
+		queue.Name,                      // queue name
+		"task.*",                        // routing key pattern (task.create, task.update, etc.)
+		model.EXCHANGE_NAME_TaskService, // exchange name
 		false,
 		nil,
 	)
@@ -103,22 +93,11 @@ func (r *rabbitMq) ReceiveMessage() {
 	forever := make(chan bool)
 	go func() {
 		for msg := range msgs {
-			// Determine the email subject based on the routing key
-			var subject string
-			switch msg.RoutingKey {
-			case ACTION_TASK_CREATE:
-				subject = "[task-service] Task Created"
-			case ACTION_TASK_UPDATE:
-				subject = "[task-service] Task Updated"
-			case ACTION_TASK_READ:
-				subject = "[task-service] Task Read"
-			case ACTION_TASK_DELETE:
-				subject = "[task-service] Task Deleted"
-			default:
-				subject = "[task-service] Task Notification"
+			if err = r.Email.SendTaskMsgEmail(msg.RoutingKey, string(msg.Body)); err != nil {
+				fmt.Println("❌ Failed send message rabbitmq to email. err = ", err)
 			}
-			fmt.Printf("Received subject: %s; Message: %s\n", subject, msg.Body)
-			r.Email.SendTaskMsgEmail(subject, string(msg.Body))
+
+			fmt.Println("✔️ Success send message rabbitmq to email.")
 		}
 	}()
 
