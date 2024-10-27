@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"time"
 	"user-service/internal/model"
 
 	redistrace "gopkg.in/DataDog/dd-trace-go.v1/contrib/redis/go-redis.v9"
@@ -28,9 +29,10 @@ func NewReddisClient(ctx context.Context) (*RedisCln, error) {
 	ctxRedis, cancelRedis := context.WithCancel(ctx)
 	host := fmt.Sprintf("localhost:%s", os.Getenv("REDIS_PORT"))
 	var opts *redis.Options = &redis.Options{
-		Addr:     host, // Replace with your Redis server address
-		Password: "",   // No password for local development
-		DB:       0,    // Default DB
+		Addr:        host, // Replace with your Redis server address
+		Password:    "",   // No password for local development
+		DB:          0,    // Default DB
+		DialTimeout: 10 * time.Second,
 	}
 	client := redis.NewClient(opts)
 

@@ -14,9 +14,9 @@ import (
 )
 
 type TaskRepository struct {
-	db     *sql.DB
-	ctx    context.Context
-	cancel context.CancelFunc
+	DB     *sql.DB
+	Ctx    context.Context
+	Cancel context.CancelFunc
 }
 
 func NewTaskRepository(ctx context.Context) (*TaskRepository, error) {
@@ -29,9 +29,9 @@ func NewTaskRepository(ctx context.Context) (*TaskRepository, error) {
 
 	repoCtx, repoCancel := context.WithCancel(ctx)
 	return &TaskRepository{
-		db:     db,
-		ctx:    repoCtx,
-		cancel: repoCancel,
+		DB:     db,
+		Ctx:    repoCtx,
+		Cancel: repoCancel,
 	}, nil
 }
 
@@ -43,7 +43,7 @@ func (r *TaskRepository) CreateNewTask(task *model.Task) (int64, error) {
 	RETURNING id 
     `
 	// Perhatikan bahwa id sekarang berupa nilai (int64), bukan pointer
-	err := r.db.QueryRowContext(r.ctx, query,
+	err := r.DB.QueryRowContext(r.Ctx, query,
 		task.Title,
 		task.Description,
 		task.Status,
@@ -68,7 +68,7 @@ func (r *TaskRepository) GetTaskById(taskId *int64) (*model.Task, error) {
 	WHERE id=$1 
 	`
 
-	err := r.db.QueryRowContext(r.ctx, query, taskId).Scan(
+	err := r.DB.QueryRowContext(r.Ctx, query, taskId).Scan(
 		&returntask.Id,
 		&returntask.Title,
 		&returntask.Description,
@@ -92,7 +92,7 @@ func (r *TaskRepository) GetAllTask() ([]*model.Task, error) {
 	FROM tasks
 	`
 	// Execute query
-	rows, err := r.db.QueryContext(r.ctx, query)
+	rows, err := r.DB.QueryContext(r.Ctx, query)
 	if err != nil {
 		return nil, err
 	}
@@ -134,7 +134,7 @@ func (r *TaskRepository) UpdateTask(task *model.Task) (*int64, error) {
 	WHERE id = $8 
 	RETURNING id 
 	`
-	err := r.db.QueryRowContext(r.ctx, query,
+	err := r.DB.QueryRowContext(r.Ctx, query,
 		task.Title,
 		task.Description,
 		task.Status,
@@ -155,7 +155,7 @@ func (r *TaskRepository) DeleteTask(taskId *int64) error {
 	DELETE FROM tasks
 	WHERE id = $1
 	`
-	res, err := r.db.ExecContext(r.ctx, query, taskId)
+	res, err := r.DB.ExecContext(r.Ctx, query, taskId)
 	if err != nil {
 		return fmt.Errorf("failed delete task from database. err = %s", err)
 	}
@@ -176,7 +176,7 @@ func (r *TaskRepository) GetAllTaskByUserId(userID string) ([]*model.Task, error
 	WHERE assigned_to=$1
 	`
 	// Execute query
-	rows, err := r.db.QueryContext(r.ctx, query, userID)
+	rows, err := r.DB.QueryContext(r.Ctx, query, userID)
 	if err != nil {
 		return nil, err
 	}
@@ -211,6 +211,6 @@ func (r *TaskRepository) GetAllTaskByUserId(userID string) ([]*model.Task, error
 }
 
 func (r *TaskRepository) Close() {
-	r.db.Close()
-	r.cancel()
+	r.DB.Close()
+	r.Cancel()
 }

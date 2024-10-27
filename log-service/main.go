@@ -13,7 +13,8 @@ import (
 )
 
 func main() {
-	fmt.Println("===== LOG SERVICE =====")
+	// time.Sleep(5 * time.Second)
+	log.Println("=== Log Microservice ===")
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

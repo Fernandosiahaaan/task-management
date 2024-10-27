@@ -65,6 +65,8 @@ func router(handler *handler.TaskHandler) {
 }
 
 func main() {
+	// time.Sleep(5 * time.Second)
+	log.Println("=== Task Microservice ===")
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 

@@ -24,7 +24,7 @@ This project utilizes several modern technologies and follows a clean architectu
 | **Clean Architecture** | Layered design for maintainability                    | ✅     |
 | **JWT Token Auth**     | Authentication and Authorization                      | ✅     |
 | **Redis**              | Caching layer for improving performance               | ✅     |
-| **RabbitMQ**           | Message queue for asynchronous communication          | ✅     |
+| **RabbitMQ**           | Message queue for asynchronous communication          | ⏳     |
 | **gRPC**               | Synchronous communication between microservices       | ✅     |
 | **PostgreSQL**         | SQL database for task and user services               | ✅     |
 | **MongoDB**            | NoSQL database for logging service (in progress)      | ✅     |

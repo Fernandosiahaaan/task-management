@@ -62,6 +62,9 @@ func router(userHandler *handler.UserHandler) {
 }
 
 func main() {
+	// time.Sleep(5 * time.Second)
+	log.Println("=== User Microservice ===")
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 

@@ -11,7 +11,9 @@ import (
 )
 
 func main() {
-	fmt.Println("== notification service ==")
+	// time.Sleep(5 * time.Second)
+	fmt.Println("=== Notification Microservice ===")
+
 	err := godotenv.Load(".env")
 	if err != nil {
 		log.Fatalf("Error loading .env file")

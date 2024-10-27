@@ -1,13 +1,6 @@
 version: "3.8"
 
 services:
-  # task-service: # Add this section for the task service
-  #   container_name: task-service
-  #   build:
-  #     context: . # Path to the Dockerfile and main.go
-  #     dockerfile: task-service.Dockerfile # Specify the Dockerfile to use
-  #   ports:
-  #     - "8080:8080" # Map the port your task service will run on
 
   redis:
     image: redis
@@ -15,6 +8,11 @@ services:
     platform: linux/amd64
     ports:
       - "6379:6379"
+    # healthcheck:
+    #   test: ["CMD", "redis-cli", "ping"]
+    #   interval: 5s
+    #   timeout: 3s
+    #   retries: 5
     networks:
       - default
 
@@ -28,6 +26,11 @@ services:
     environment:
       RABBITMQ_DEFAULT_USER: user
       RABBITMQ_DEFAULT_PASS: password
+    # healthcheck:
+    #   test: ["CMD", "rabbitmqctl", "ping"]
+    #   interval: 30s
+    #   timeout: 10s
+    #   retries: 5
     networks:
       - default
 
@@ -41,6 +44,11 @@ services:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
       POSTGRES_DB: mydatabase
+    # healthcheck:
+    #   test: ["CMD-SHELL", "pg_isready -U user"]
+    #   interval: 30s
+    #   timeout: 10s
+    #   retries: 5
     networks:
       - default
 
@@ -55,12 +63,17 @@ services:
       MYSQL_DATABASE: mydatabase
       MYSQL_USER: user
       MYSQL_PASSWORD: password
+    # healthcheck:
+    #   test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p$password"]
+    #   interval: 30s
+    #   timeout: 10s
+    #   retries: 5
     networks:
       - default
   
-  mongo:
+  mongodb:
     image: mongo:latest
-    container_name: mongo
+    container_name: mongodb
     platform: linux/amd64
     ports:
       - "27017:27017"   
@@ -70,6 +83,11 @@ services:
       MONGO_INITDB_ROOT_USERNAME: admin    
       MONGO_INITDB_ROOT_PASSWORD: password 
       MONGO_INITDB_DATABASE: task_management_logs
+    # healthcheck:
+    #   test: ["CMD", "mongo", "--eval", "db.runCommand({ ping: 1 })"]
+    #   interval: 30s
+    #   timeout: 10s
+    #   retries: 5
     networks:
       - default 
 
@@ -81,7 +99,7 @@ services:
     ports:
       - "8081:8081"
     depends_on:
-      - mongo
+      - mongodb
     environment:
       ME_CONFIG_MONGODB_ADMINUSERNAME: admin
       ME_CONFIG_MONGODB_ADMINPASSWORD: password
@@ -89,29 +107,84 @@ services:
     networks:
       - default
 
-  # datadog:
-  #   image: "datadog/agent:latest" # Menggunakan image resmi Datadog Agent
-  #   container_name: datadog
-  #   platform: linux/amd64
-  #   environment:
-  #     - DD_API_KEY=${DATADOG_APIKEY} # Ganti dengan API Key Datadog Anda
-  #     - DD_SITE=${DATADOG_SITE}
-  #     - DD_ENV=development # Environment (dev, staging, production)
-  #     - DD_SERVICE=your-service-name # Nama service
-  #     - DD_VERSION=1.0 # Versi aplikasi
-  #     - DD_LOGS_ENABLED=true # Mengaktifkan log collection
-  #     - DD_APM_ENABLED=true # Mengaktifkan APM (Application Performance Monitoring)
-  #     - DD_PROCESS_AGENT_ENABLED=true # Mengaktifkan Process Agent untuk memonitor proses
-  #     - DD_CONTAINER_EXCLUDE="name:datadog-agent" # Agar agent tidak memonitor dirinya sendiri
-  #   volumes:
-  #     - /var/run/docker.sock:/var/run/docker.sock # Memberi akses ke Docker socket
-  #     - /proc/:/host/proc/:ro # Memberi akses ke file system proc untuk mengumpulkan metrik sistem
-  #     - /sys/fs/cgroup/:/host/sys/fs/cgroup:ro # Akses ke cgroup untuk melacak penggunaan resource container
+  # log-service:
+  #   container_name: log-service
+  #   build:
+  #     context: ./log-service
   #   ports:
-  #     - "8826:8126/tcp" # APM tracing port
-  #     - "8825:8125/udp" # DogStatsD port
+  #     - "8085:8085"
+  #   environment:
+  #     - ENV_FILE=.env
+  #   depends_on:
+  #     - redis
+  #     - rabbitmq
+  #     - postgres
+  #     - mysql
+  #     - mongodb
+  #   # depends_on:
+  #   #   redis:
+  #   #     condition: service_healthy
+  #   #   rabbitmq:
+  #   #     condition: service_healthy
+  #   #   postgres:
+  #   #     condition: service_healthy
+  #   #   mysql:
+  #   #     condition: service_healthy
+  #     # mongodb: {}
   #   networks:
   #     - default
+
+  # notification-service:
+  #   container_name: notification-service
+  #   build:
+  #     context: ./notification-service
+  #   ports:
+  #     - "8086:8086"
+  #   environment:
+  #     - ENV_FILE=.env
+  #   depends_on:
+  #     - redis
+  #     - rabbitmq
+  #     - postgres
+  #     - mysql
+  #     - mongodb
+  #   networks:
+  #     - default
+
+  # user-service:
+  #   container_name: user-service
+  #   build:
+  #     context: ./user-service
+  #   ports:
+  #     - "8087:8087"
+  #   environment:
+  #     - ENV_FILE=.env
+  #   depends_on:
+  #     - redis
+  #     - rabbitmq
+  #     - postgres
+  #     - mysql
+  #     - mongodb
+  #   networks:
+  #     - default
+  
+  # task-service:
+  #   container_name: task-service
+  #   build:
+  #     context: ./task-service
+  #   ports:
+  #     - "8088:8088"
+  #   environment:
+  #     - ENV_FILE=.env
+  #   depends_on:
+  #     - redis
+  #     - rabbitmq
+  #     - postgres
+  #     - mysql
+  #     - mongodb
+  #   networks:
+  #     - default
+
 networks:
   default:
     driver: bridge
