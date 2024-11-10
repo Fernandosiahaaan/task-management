@@ -81,10 +81,6 @@ func (s *TaskHandler) TaskCreate(w http.ResponseWriter, r *http.Request) {
 	task.Id = taskId
 
 	go s.grpcConn.LogGrpcClient.SendTaskToLogging(3*time.Second, &task, task.CreatedBy, pb.TaskAction_CREATE_TASK)
-	// if err = s.grpcConn.LogGrpcClient.SendTaskToLogging(3*time.Second, &task, task.CreatedBy, pb.TaskAction_CREATE_TASK); err != nil {
-	// 	model.CreateResponseHttp(w, http.StatusInternalServerError, model.Response{Error: true, Message: fmt.Sprintf("failed send task to log service. err = %v", err)})
-	// 	return
-	// }
 
 	var response model.Response = model.Response{Error: false, Message: fmt.Sprintf("successfully created task %d", task.Id), Data: task}
 	// model.CreateResponseHttp(w, http.StatusBadRequest, response)
@@ -129,10 +125,6 @@ func (s *TaskHandler) TaskUpdate(w http.ResponseWriter, r *http.Request) {
 	task.Id = *taskId
 
 	go s.grpcConn.LogGrpcClient.SendTaskToLogging(3*time.Second, &task, task.UpdatedBy, pb.TaskAction_UPDATE_TASK)
-	// if err = s.grpcConn.LogGrpcClient.SendTaskToLogging(3*time.Second, &task, task.UpdatedBy, pb.TaskAction_UPDATE_TASK); err != nil {
-	// 	model.CreateResponseHttp(w, http.StatusInternalServerError, model.Response{Error: true, Message: fmt.Sprintf("failed send task to log service. err = %v", err)})
-	// 	return
-	// }
 
 	var response model.Response = model.Response{Error: false, Message: fmt.Sprintf("success update task %d", task.Id), Data: task}
 	// model.CreateResponseHttp(w, http.StatusOK, response)
@@ -202,10 +194,6 @@ func (s *TaskHandler) TaskDelete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	go s.grpcConn.LogGrpcClient.SendTaskToLogging(3*time.Second, task, userLogin.Id, pb.TaskAction_DELETE_TASK)
-	// if err = s.grpcConn.LogGrpcClient.SendTaskToLogging(3*time.Second, task, userLogin.Id, pb.TaskAction_DELETE_TASK); err != nil {
-	// 	model.CreateResponseHttp(w, http.StatusInternalServerError, model.Response{Error: true, Message: fmt.Sprintf("failed send task to log service. err = %v", err)})
-	// 	return
-	// }
 
 	var response model.Response = model.Response{Error: false, Message: fmt.Sprintf("Success Delete Task %d", taskId)}
 	// model.CreateResponseHttp(w, http.StatusOK, response)
