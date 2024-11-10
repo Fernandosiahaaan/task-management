@@ -3,6 +3,7 @@ package rabbitmq
 import (
 	"fmt"
 	"log"
+	grpc "notification-service/infrastructure/gRPC"
 	"notification-service/internal/mail"
 	"notification-service/internal/model"
 	"os"
@@ -10,10 +11,16 @@ import (
 	"github.com/streadway/amqp"
 )
 
-type rabbitMq struct {
-	URL   string
-	Conn  *amqp.Connection
+type RabbitMqParam struct {
 	Email *mail.Mail
+	GRPC  *grpc.GrpcComm
+}
+
+type RabbitMq struct {
+	url   string
+	Conn  *amqp.Connection
+	email *mail.Mail
+	grpc  *grpc.GrpcComm
 }
 
 // Helper function to handle errors
@@ -24,39 +31,32 @@ func failOnError(err error, msg string) {
 }
 
 // Initialize RabbitMQ connection
-func Init(email *mail.Mail) (*rabbitMq, error) {
-	// Create a new instance of rabbitMq
-	output := &rabbitMq{}
-
-	// Retrieve credentials from environment variables
+func Init(params RabbitMqParam) (*RabbitMq, error) {
+	output := &RabbitMq{}
 	username := os.Getenv("RABBITMQ_USERNAME")
 	password := os.Getenv("RABBITMQ_PASSWORD")
 	port := os.Getenv("RABBITMQ_PORT")
 
-	// Format the RabbitMQ URL
-	output.URL = fmt.Sprintf("amqp://%s:%s@localhost:%s/", username, password, port)
-	output.Email = email
+	output.url = fmt.Sprintf("amqp://%s:%s@localhost:%s/", username, password, port)
+	output.email = params.Email
+	output.grpc = params.GRPC
 
 	// Establish connection to RabbitMQ
 	var err error
-	output.Conn, err = amqp.Dial(output.URL)
+	output.Conn, err = amqp.Dial(output.url)
 	if err != nil {
 		return nil, err
 	}
 
-	// Return the RabbitMQ instance with connection
 	return output, nil
 }
 
 // Method to receive messages from RabbitMQ
-// Method to receive messages from RabbitMQ
-func (r *rabbitMq) ReceiveMessage() {
-	// Open a channel
+func (r *RabbitMq) ReceiveMessage() {
 	channel, err := r.Conn.Channel()
 	failOnError(err, "Failed to open a channel")
 	defer channel.Close()
 
-	// Declare a temporary queue with a random name
 	queue, err := channel.QueueDeclare(
 		"",    // leave the name empty to let RabbitMQ generate a random queue name
 		false, // durable
@@ -89,11 +89,10 @@ func (r *rabbitMq) ReceiveMessage() {
 	)
 	failOnError(err, "Failed to register a consumer")
 
-	// Goroutine to handle incoming messages
 	forever := make(chan bool)
 	go func() {
 		for msg := range msgs {
-			if err = r.Email.SendTaskMsgEmail(msg.RoutingKey, string(msg.Body)); err != nil {
+			if err = r.email.SendTaskMsgEmail(msg.RoutingKey, string(msg.Body)); err != nil {
 				fmt.Println("❌ Failed send message rabbitmq to email. err = ", err)
 			}
 

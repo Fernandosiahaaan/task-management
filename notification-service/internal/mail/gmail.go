@@ -4,18 +4,27 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/smtp"
+	grpc "notification-service/infrastructure/gRPC"
 	"notification-service/internal/model"
+	"time"
 )
 
+type MailParams struct {
+	Email    string
+	Password string
+	GRPC     *grpc.GrpcComm
+}
 type Mail struct {
 	Email    string
 	Password string
+	grpc     *grpc.GrpcComm
 }
 
-func Init(email, password string) (*Mail, error) {
+func Init(params MailParams) (*Mail, error) {
 	var mail *Mail = &Mail{
-		Email:    email,
-		Password: password,
+		Email:    params.Email,
+		Password: params.Password,
+		grpc:     params.GRPC,
 	}
 	return mail, nil
 }
@@ -41,10 +50,21 @@ func (m *Mail) SendTaskMsgEmail(actionTask, body string) error {
 			return fmt.Errorf("failed convert message data of task to struct. err = %v", err)
 		}
 	}
+
+	fmt.Println("task = ", task)
+	return m.processSendTaskEmail(task, actionTask)
+}
+
+func (m *Mail) processSendTaskEmail(task *model.Task, actionTask string) error {
+	responseGrpc, err := m.grpc.UserGrpcClient.RequestUserInfo(task.AssignedTo, 5*time.Second)
+	if err != nil {
+		return fmt.Errorf("failed request email to user service. err = %s", err.Error())
+	}
+
 	subject := m.createSubjectMailTask(actionTask, task.Title)
 	bodyMail := m.createBodyMailTask(actionTask, task)
 
-	if err = m.sendMessageGmail("example@gmail.com", subject, bodyMail); err != nil {
+	if err = m.sendMessageGmail(responseGrpc.Email, subject, bodyMail); err != nil {
 		return fmt.Errorf("failed send notification task to email. err = %v", err)
 	}
 
