@@ -25,13 +25,15 @@ This project utilizes several modern technologies and follows a clean architectu
 | **Microservices**      | Independent services (User, Task, Log, Notification)  | ✅     |
 | **Clean Architecture** | Layered design for maintainability                    | ✅     |
 | **JWT Token Auth**     | Authentication and Authorization                      | ✅     |
+| **SMTP**               | Share notification info to user                       | ✅     |
 | **Redis**              | Caching layer for improving performance               | ✅     |
-| **RabbitMQ**           | Message queue for asynchronous communication          | ⏳     |
+| **RabbitMQ**           | Message queue for asynchronous communication          | ✅     |
 | **gRPC**               | Synchronous communication between microservices       | ✅     |
 | **PostgreSQL**         | SQL database for task and user services               | ✅     |
 | **MongoDB**            | NoSQL database for logging service (in progress)      | ✅     |
 | **Docker**             | Containerization for setup and environment management | ✅     |
 | **DataDog**            | Monitoring and observability tool                     | ✅     |
+| **Jenkins**            | CI/CD process development                             | ⏳     |
 
 ## 🖊 Documentation
 
