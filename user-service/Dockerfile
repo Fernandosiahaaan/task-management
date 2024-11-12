@@ -5,12 +5,13 @@ FROM golang:1.22.0 AS builder
 WORKDIR /app
 
 COPY go.mod go.sum ./
-RUN go mod download
+RUN go mod tidy
 COPY ./ ./
 RUN go build -o user-service .
 FROM gcr.io/distroless/base
+WORKDIR /
 COPY --from=builder /app/user-service ./
 COPY .env .env
 
-# Command to run the executable
+# Define the entrypoint for the application
 ENTRYPOINT ["/user-service"]

@@ -44,8 +44,9 @@ func Init(ctx context.Context) (*RabbitMq, error) {
 
 	username := os.Getenv("RABBITMQ_USERNAME")
 	password := os.Getenv("RABBITMQ_PASSWORD")
+	host := os.Getenv("RABBITMQ_HOST")
 	port := os.Getenv("RABBITMQ_PORT")
-	output.URL = fmt.Sprintf("amqp://%s:%s@localhost:%s/", username, password, port)
+	output.URL = fmt.Sprintf("amqp://%s:%s@%s:%s/", username, password, host, port)
 
 	// Establish connection to RabbitMQ
 	var err error

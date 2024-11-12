@@ -4,3 +4,4 @@
 /vendor
 /notification-service/vendor
 /notification-service/.env
+.DS_Store

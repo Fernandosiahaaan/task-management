@@ -45,7 +45,7 @@ func router(handler *handler.TaskHandler) {
 	if portHttp == "" {
 		portHttp = "4001"
 	}
-	localHost := fmt.Sprintf("localhost:%s", portHttp)
+	localHost := fmt.Sprintf("0.0.0.0:%s", portHttp)
 	fmt.Printf("🌐 %s\n", localHost)
 	// err := http.ListenAndServe("localhost:4001", router)
 	err := http.ListenAndServe(localHost,

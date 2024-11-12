@@ -41,7 +41,7 @@ func router(userHandler *handler.UserHandler) {
 	if portHttp == "" {
 		portHttp = "4000"
 	}
-	localHost := fmt.Sprintf("localhost:%s", portHttp)
+	localHost := fmt.Sprintf("0.0.0.0:%s", portHttp)
 	fmt.Printf("🌐 HTTP Api %s\n", localHost)
 	// err := http.ListenAndServe("localhost:4000", router)
 	err := http.ListenAndServe(localHost,
@@ -58,7 +58,7 @@ func router(userHandler *handler.UserHandler) {
 	if err != nil {
 		fmt.Println("Could not start the server", err)
 	}
-	fmt.Println("Server started. Listenning on port 4000")
+	fmt.Println("Server started. Listenning on port 8000")
 }
 
 func main() {

@@ -27,7 +27,7 @@ type RedisCln struct {
 func NewReddisClient(ctx context.Context) (*RedisCln, error) {
 	// Connect to Redis
 	ctxRedis, cancelRedis := context.WithCancel(ctx)
-	host := fmt.Sprintf("localhost:%s", os.Getenv("REDIS_PORT"))
+	host := fmt.Sprintf("%s:%s", os.Getenv("REDIS_HOST"), os.Getenv("REDIS_PORT"))
 	var opts *redis.Options = &redis.Options{
 		Addr:        host, // Replace with your Redis server address
 		Password:    "",   // No password for local development

@@ -8,7 +8,7 @@ import (
 )
 
 func Init() {
-	host := fmt.Sprintf("localhost:%s", os.Getenv("DD_PORT"))
+	host := fmt.Sprintf("%s:%s", os.Getenv("DD_HOST"), os.Getenv("DD_PORT"))
 	tracer.Start(
 		tracer.WithDebugMode(false),
 		tracer.WithAgentAddr(host),
