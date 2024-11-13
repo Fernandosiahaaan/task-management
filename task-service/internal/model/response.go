@@ -12,14 +12,14 @@ type Response struct {
 	Data    interface{} `json:"data"`
 }
 
-func CreateResponseHttp(w http.ResponseWriter, statusCode int, response Response) {
+func CreateResponseHttp(w http.ResponseWriter, r *http.Request, statusCode int, response Response) {
 	w.WriteHeader(statusCode)
 	json.NewEncoder(w).Encode(response)
 	if response.Error {
-		fmt.Printf("❌ status code = %d; message = %s\n", statusCode, response.Message)
+		fmt.Printf("❌  [%s] uri = '%s'; status code = %d; message = %s\n", r.Method, r.RequestURI, statusCode, response.Message)
 		return
 	}
-	fmt.Printf("✔️  status code = %d; message = %s\n", statusCode, response.Message)
+	fmt.Printf("✅  [%s] uri = '%s'; status code = %d; message = %s\n", r.Method, r.RequestURI, statusCode, response.Message)
 }
 
 func ConvertResponseToStr(response Response) (string, error) {

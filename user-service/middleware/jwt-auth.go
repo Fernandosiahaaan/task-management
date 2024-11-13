@@ -65,20 +65,20 @@ func (m *Midleware) AuthMiddleware(next http.Handler) http.Handler {
 
 		authToken := r.Header.Get("Authorization")
 		if authToken == "" {
-			model.CreateResponseHttp(w, http.StatusUnauthorized, model.ResponseHttp{Error: true, Message: "Authentication header null"})
+			model.CreateResponseHttp(w, r, http.StatusUnauthorized, model.ResponseHttp{Error: true, Message: "Authentication header null"})
 			return
 		}
 
 		bearerToken := strings.Split(authToken, " ")
 		if len(bearerToken) != 2 {
-			model.CreateResponseHttp(w, http.StatusUnauthorized, model.ResponseHttp{Error: true, Message: "Invalid format token"})
+			model.CreateResponseHttp(w, r, http.StatusUnauthorized, model.ResponseHttp{Error: true, Message: "Invalid format token"})
 			return
 		}
 
 		var jwtToken string = bearerToken[1]
 		token, err := m.VerifyToken(jwtToken)
 		if err != nil {
-			model.CreateResponseHttp(w, http.StatusUnauthorized, model.ResponseHttp{Error: true, Message: fmt.Sprintf("Failed token. err = %s", err)})
+			model.CreateResponseHttp(w, r, http.StatusUnauthorized, model.ResponseHttp{Error: true, Message: fmt.Sprintf("Failed token. err = %s", err)})
 			return
 		}
 
@@ -94,7 +94,7 @@ func (m *Midleware) AuthMiddleware(next http.Handler) http.Handler {
 
 		_, err = m.redis.GetLoginInfo(jwtToken)
 		if err != nil {
-			model.CreateResponseHttp(w, http.StatusUnauthorized, model.ResponseHttp{Error: true, Message: fmt.Sprintf("Token session expired. err = %s", err)})
+			model.CreateResponseHttp(w, r, http.StatusUnauthorized, model.ResponseHttp{Error: true, Message: fmt.Sprintf("Token session expired. err = %s", err)})
 			return
 		}
 

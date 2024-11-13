@@ -48,32 +48,32 @@ func (m *Middleware) AuthMiddleware(next http.Handler) http.Handler {
 
 		authToken := r.Header.Get("Authorization")
 		if authToken == "" {
-			model.CreateResponseHttp(w, http.StatusUnauthorized, model.Response{Error: true, Message: "Authentication header null"})
+			model.CreateResponseHttp(w, r, http.StatusUnauthorized, model.Response{Error: true, Message: "Authentication header null"})
 			return
 		}
 
 		bearerToken := strings.Split(authToken, " ")
 		if len(bearerToken) != 2 {
-			model.CreateResponseHttp(w, http.StatusUnauthorized, model.Response{Error: true, Message: "Invalid format token"})
+			model.CreateResponseHttp(w, r, http.StatusUnauthorized, model.Response{Error: true, Message: "Invalid format token"})
 			return
 		}
 
 		var jwtToken string = bearerToken[1]
 		token, err := m.verifyToken(jwtToken)
 		if err != nil {
-			model.CreateResponseHttp(w, http.StatusUnauthorized, model.Response{Error: true, Message: fmt.Sprintf("Failed token. err = %s", err)})
+			model.CreateResponseHttp(w, r, http.StatusUnauthorized, model.Response{Error: true, Message: fmt.Sprintf("Failed token. err = %s", err)})
 			return
 		}
 
 		_, ok := token.Claims.(jwt.MapClaims)
 		if !ok {
-			model.CreateResponseHttp(w, http.StatusUnauthorized, model.Response{Error: true, Message: "Failed claims token"})
+			model.CreateResponseHttp(w, r, http.StatusUnauthorized, model.Response{Error: true, Message: "Failed claims token"})
 			return
 		}
 
 		_, err = m.redis.GetLoginInfoFromRedis(jwtToken)
 		if err != nil {
-			model.CreateResponseHttp(w, http.StatusUnauthorized, model.Response{Error: true, Message: fmt.Sprintf("Failed Login Session. Err = %s", err.Error())})
+			model.CreateResponseHttp(w, r, http.StatusUnauthorized, model.Response{Error: true, Message: fmt.Sprintf("Failed Login Session. Err = %s", err.Error())})
 			return
 		}
 

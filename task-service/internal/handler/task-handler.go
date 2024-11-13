@@ -57,25 +57,25 @@ func (s *TaskHandler) TaskCreate(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	if err := json.NewDecoder(r.Body).Decode(&task); err != nil {
-		model.CreateResponseHttp(w, http.StatusBadRequest, model.Response{Error: true, Message: "failed parse body request"})
+		model.CreateResponseHttp(w, r, http.StatusBadRequest, model.Response{Error: true, Message: "failed parse body request"})
 		return
 	}
 
 	if err = s.compareUser(tokenStr, task.CreatedBy); err != nil {
-		model.CreateResponseHttp(w, http.StatusBadRequest, model.Response{Error: true, Message: err.Error()})
+		model.CreateResponseHttp(w, r, http.StatusBadRequest, model.Response{Error: true, Message: err.Error()})
 		return
 	}
 
 	// Validate UUID of user Assigned & Created User
 	err = s.grpcConn.UserGrpcClient.ValidateUserUUID(task.AssignedTo, task.CreatedBy)
 	if err != nil {
-		model.CreateResponseHttp(w, http.StatusInternalServerError, model.Response{Error: true, Message: err.Error()})
+		model.CreateResponseHttp(w, r, http.StatusInternalServerError, model.Response{Error: true, Message: err.Error()})
 		return
 	}
 
 	taskId, err := s.service.CreateNewTask(&task)
 	if err != nil {
-		model.CreateResponseHttp(w, http.StatusBadRequest, model.Response{Error: true, Message: fmt.Sprintf("failed create new task. err = %s", err.Error())})
+		model.CreateResponseHttp(w, r, http.StatusBadRequest, model.Response{Error: true, Message: fmt.Sprintf("failed create new task. err = %s", err.Error())})
 		return
 	}
 	task.Id = taskId
@@ -83,8 +83,8 @@ func (s *TaskHandler) TaskCreate(w http.ResponseWriter, r *http.Request) {
 	go s.grpcConn.LogGrpcClient.SendTaskToLogging(3*time.Second, &task, task.CreatedBy, pb.TaskAction_CREATE_TASK)
 
 	var response model.Response = model.Response{Error: false, Message: fmt.Sprintf("successfully created task %d", task.Id), Data: task}
-	// model.CreateResponseHttp(w, http.StatusBadRequest, response)
-	s.sendDoubleResponse(w, http.StatusCreated, rabbitmq.ACTION_TASK_CREATE, response)
+	// model.CreateResponseHttp(w, r, http.StatusBadRequest, response)
+	s.sendDoubleResponse(w, r, http.StatusCreated, rabbitmq.ACTION_TASK_CREATE, response)
 }
 
 func (s *TaskHandler) TaskUpdate(w http.ResponseWriter, r *http.Request) {
@@ -94,32 +94,32 @@ func (s *TaskHandler) TaskUpdate(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 
 	if err = json.NewDecoder(r.Body).Decode(&task); err != nil {
-		model.CreateResponseHttp(w, http.StatusBadRequest, model.Response{Error: true, Message: "failed parse body request"})
+		model.CreateResponseHttp(w, r, http.StatusBadRequest, model.Response{Error: true, Message: "failed parse body request"})
 		return
 	}
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["taskId"])
 	if err != nil {
-		model.CreateResponseHttp(w, http.StatusInternalServerError, model.Response{Error: true, Message: "failed task id"})
+		model.CreateResponseHttp(w, r, http.StatusInternalServerError, model.Response{Error: true, Message: "failed task id"})
 		return
 	}
 	task.Id = int64(id)
 
 	if err = s.compareUser(tokenStr, task.UpdatedBy); err != nil {
-		model.CreateResponseHttp(w, http.StatusBadRequest, model.Response{Error: true, Message: err.Error()})
+		model.CreateResponseHttp(w, r, http.StatusBadRequest, model.Response{Error: true, Message: err.Error()})
 		return
 	}
 
 	// Validate UUID of user Assigned & Created User
 	err = s.grpcConn.UserGrpcClient.ValidateUserUUID(task.AssignedTo, task.UpdatedBy)
 	if err != nil {
-		model.CreateResponseHttp(w, http.StatusInternalServerError, model.Response{Error: true, Message: err.Error()})
+		model.CreateResponseHttp(w, r, http.StatusInternalServerError, model.Response{Error: true, Message: err.Error()})
 		return
 	}
 
 	taskId, err := s.service.UpdateTask(&task)
 	if err != nil {
-		model.CreateResponseHttp(w, http.StatusBadRequest, model.Response{Error: true, Message: err.Error()})
+		model.CreateResponseHttp(w, r, http.StatusBadRequest, model.Response{Error: true, Message: err.Error()})
 		return
 	}
 	task.Id = *taskId
@@ -127,8 +127,8 @@ func (s *TaskHandler) TaskUpdate(w http.ResponseWriter, r *http.Request) {
 	go s.grpcConn.LogGrpcClient.SendTaskToLogging(3*time.Second, &task, task.UpdatedBy, pb.TaskAction_UPDATE_TASK)
 
 	var response model.Response = model.Response{Error: false, Message: fmt.Sprintf("success update task %d", task.Id), Data: task}
-	// model.CreateResponseHttp(w, http.StatusOK, response)
-	s.sendDoubleResponse(w, http.StatusOK, rabbitmq.ACTION_TASK_UPDATE, response)
+	// model.CreateResponseHttp(w, r, http.StatusOK, response)
+	s.sendDoubleResponse(w, r, http.StatusOK, rabbitmq.ACTION_TASK_UPDATE, response)
 }
 
 func (s *TaskHandler) TaskRead(w http.ResponseWriter, r *http.Request) {
@@ -138,19 +138,19 @@ func (s *TaskHandler) TaskRead(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["taskId"])
 	if err != nil {
-		model.CreateResponseHttp(w, http.StatusInternalServerError, model.Response{Error: true, Message: "failed task id"})
+		model.CreateResponseHttp(w, r, http.StatusInternalServerError, model.Response{Error: true, Message: "failed task id"})
 	}
 	taskId := int64(id)
 
 	task, err := s.service.GetTask(&taskId)
 	if err != nil {
-		model.CreateResponseHttp(w, http.StatusBadRequest, model.Response{Error: true, Message: err.Error()})
+		model.CreateResponseHttp(w, r, http.StatusBadRequest, model.Response{Error: true, Message: err.Error()})
 		return
 	} else if task == nil {
-		model.CreateResponseHttp(w, http.StatusBadRequest, model.Response{Error: true, Message: "not found task from db"})
+		model.CreateResponseHttp(w, r, http.StatusBadRequest, model.Response{Error: true, Message: "not found task from db"})
 		return
 	}
-	model.CreateResponseHttp(w, http.StatusOK, model.Response{Error: false, Message: fmt.Sprintf("Read Task %d", taskId), Data: task})
+	model.CreateResponseHttp(w, r, http.StatusOK, model.Response{Error: false, Message: fmt.Sprintf("Read Task %d", taskId), Data: task})
 }
 
 func (s *TaskHandler) TaskReadAll(w http.ResponseWriter, r *http.Request) {
@@ -159,13 +159,13 @@ func (s *TaskHandler) TaskReadAll(w http.ResponseWriter, r *http.Request) {
 
 	tasks, err := s.service.GetAllTask()
 	if err != nil {
-		model.CreateResponseHttp(w, http.StatusBadRequest, model.Response{Error: true, Message: err.Error()})
+		model.CreateResponseHttp(w, r, http.StatusBadRequest, model.Response{Error: true, Message: err.Error()})
 		return
 	} else if tasks == nil {
-		model.CreateResponseHttp(w, http.StatusBadRequest, model.Response{Error: true, Message: "not found all task from db"})
+		model.CreateResponseHttp(w, r, http.StatusBadRequest, model.Response{Error: true, Message: "not found all task from db"})
 		return
 	}
-	model.CreateResponseHttp(w, http.StatusOK, model.Response{Error: false, Message: "Success Read Task", Data: tasks})
+	model.CreateResponseHttp(w, r, http.StatusOK, model.Response{Error: false, Message: "Success Read Task", Data: tasks})
 }
 
 func (s *TaskHandler) TaskDelete(w http.ResponseWriter, r *http.Request) {
@@ -176,28 +176,28 @@ func (s *TaskHandler) TaskDelete(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, err := strconv.Atoi(vars["taskId"])
 	if err != nil {
-		model.CreateResponseHttp(w, http.StatusInternalServerError, model.Response{Error: true, Message: "failed task id"})
+		model.CreateResponseHttp(w, r, http.StatusInternalServerError, model.Response{Error: true, Message: "failed task id"})
 	}
 	taskId := int64(id)
 
 	err = s.service.DeleteTask(&taskId)
 	if err != nil {
-		model.CreateResponseHttp(w, http.StatusBadRequest, model.Response{Error: true, Message: err.Error()})
+		model.CreateResponseHttp(w, r, http.StatusBadRequest, model.Response{Error: true, Message: err.Error()})
 		return
 	}
 
 	var task *model.Task = &model.Task{Id: taskId}
 	userLogin, err := s.Redis.GetLoginInfoFromRedis(tokenStr)
 	if err != nil {
-		model.CreateResponseHttp(w, http.StatusInternalServerError, model.Response{Error: true, Message: fmt.Sprintf("failed get user id from redis. err = %v", err)})
+		model.CreateResponseHttp(w, r, http.StatusInternalServerError, model.Response{Error: true, Message: fmt.Sprintf("failed get user id from redis. err = %v", err)})
 		return
 	}
 
 	go s.grpcConn.LogGrpcClient.SendTaskToLogging(3*time.Second, task, userLogin.Id, pb.TaskAction_DELETE_TASK)
 
 	var response model.Response = model.Response{Error: false, Message: fmt.Sprintf("Success Delete Task %d", taskId)}
-	// model.CreateResponseHttp(w, http.StatusOK, response)
-	s.sendDoubleResponse(w, http.StatusOK, rabbitmq.ACTION_TASK_DELETE, response)
+	// model.CreateResponseHttp(w, r, http.StatusOK, response)
+	s.sendDoubleResponse(w, r, http.StatusOK, rabbitmq.ACTION_TASK_DELETE, response)
 }
 
 // compare user login from jwt with user created/ user updated when update/create task
@@ -212,14 +212,14 @@ func (s *TaskHandler) compareUser(jwtToken string, userId string) error {
 	}
 	return nil
 }
-func (s *TaskHandler) sendDoubleResponse(w http.ResponseWriter, httpStatusCode int, actionRabitMq string, response model.Response) {
+func (s *TaskHandler) sendDoubleResponse(w http.ResponseWriter, r *http.Request, httpStatusCode int, actionRabitMq string, response model.Response) {
 	messageQueue, err := model.ConvertResponseToStr(response)
 	if err != nil {
-		model.CreateResponseHttp(w, http.StatusInternalServerError, model.Response{Error: true, Message: fmt.Sprintf("failed send message to notification service. err = %s", err.Error())})
+		model.CreateResponseHttp(w, r, http.StatusInternalServerError, model.Response{Error: true, Message: fmt.Sprintf("failed send message to notification service. err = %s", err.Error())})
 		return
 	}
 	s.rabbitMq.SendMessage(rabbitmq.EXCHANGE_NAME_TaskService, actionRabitMq, messageQueue)
-	model.CreateResponseHttp(w, httpStatusCode, response)
+	model.CreateResponseHttp(w, r, httpStatusCode, response)
 }
 
 func (s *TaskHandler) TasksUserRead(w http.ResponseWriter, r *http.Request) {
@@ -229,25 +229,25 @@ func (s *TaskHandler) TasksUserRead(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	userId := vars["userId"]
 	if userId == "" {
-		model.CreateResponseHttp(w, http.StatusInternalServerError, model.Response{Error: true, Message: "failed user id"})
+		model.CreateResponseHttp(w, r, http.StatusInternalServerError, model.Response{Error: true, Message: "failed user id"})
 		return
 	}
 
 	_, err = s.grpcConn.UserGrpcClient.RequestUserInfo(userId, 1*time.Second)
 	if err != nil {
-		model.CreateResponseHttp(w, http.StatusInternalServerError, model.Response{Error: true, Message: fmt.Sprintf("failed get uuid %s of task from user service. err %v", userId, err)})
+		model.CreateResponseHttp(w, r, http.StatusInternalServerError, model.Response{Error: true, Message: fmt.Sprintf("failed get uuid %s of task from user service. err %v", userId, err)})
 		return
 	}
 
 	tasks, err := s.service.GetTasksByUSerID(userId)
 	if err != nil {
-		model.CreateResponseHttp(w, http.StatusBadRequest, model.Response{Error: true, Message: err.Error()})
+		model.CreateResponseHttp(w, r, http.StatusBadRequest, model.Response{Error: true, Message: err.Error()})
 		return
 	} else if tasks == nil {
-		model.CreateResponseHttp(w, http.StatusBadRequest, model.Response{Error: true, Message: fmt.Sprintf("not found task user %s from db", userId)})
+		model.CreateResponseHttp(w, r, http.StatusBadRequest, model.Response{Error: true, Message: fmt.Sprintf("not found task user %s from db", userId)})
 		return
 	}
-	model.CreateResponseHttp(w, http.StatusOK, model.Response{Error: false, Message: fmt.Sprintf("Read Task user id = %s", userId), Data: tasks})
+	model.CreateResponseHttp(w, r, http.StatusOK, model.Response{Error: false, Message: fmt.Sprintf("Read Task user id = %s", userId), Data: tasks})
 }
 
 func (s *TaskHandler) Close() {

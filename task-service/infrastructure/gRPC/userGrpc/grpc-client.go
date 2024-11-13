@@ -13,6 +13,7 @@ import (
 
 type ParamClientGrpc struct {
 	Ctx  context.Context
+	Host string
 	Port string
 }
 
@@ -32,7 +33,7 @@ func ConnectToServerGrpc(param ParamClientGrpc) (*ClientGrpc, error) {
 	si := grpctrace.StreamClientInterceptor(grpctrace.WithServiceName("my-grpc-client"))
 	ui := grpctrace.UnaryClientInterceptor(grpctrace.WithServiceName("my-grpc-client"))
 
-	client.hostname = fmt.Sprintf("localhost:%s", param.Port)
+	client.hostname = fmt.Sprintf("%s:%s", param.Host, param.Port)
 	client.conn, err = grpc.Dial(
 		client.hostname,
 		grpc.WithInsecure(),

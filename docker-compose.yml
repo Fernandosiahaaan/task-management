@@ -8,11 +8,11 @@ services:
     platform: linux/amd64
     ports:
       - "6379:6379"
-    # healthcheck:
-    #   test: ["CMD", "redis-cli", "ping"]
-    #   interval: 5s
-    #   timeout: 3s
-    #   retries: 5
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
     networks:
       - default
 
@@ -21,16 +21,16 @@ services:
     container_name: rabbitmq
     platform: linux/amd64
     ports:
-      - "5772:5672"
+      - "5672:5672"
       - "15672:15672"
     environment:
       RABBITMQ_DEFAULT_USER: user
       RABBITMQ_DEFAULT_PASS: password
-    # healthcheck:
-    #   test: ["CMD", "rabbitmqctl", "ping"]
-    #   interval: 30s
-    #   timeout: 10s
-    #   retries: 5
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
     networks:
       - default
 
@@ -44,11 +44,13 @@ services:
       POSTGRES_USER: user
       POSTGRES_PASSWORD: password
       POSTGRES_DB: mydatabase
-    healthcheck:
-      test: ["CMD", "pg_isready", "-U", "user"]
-      interval: 30s
-      timeout: 10s
-      retries: 5
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    # healthcheck:
+    #   test: ["CMD", "pg_isready", "-U", "user"]
+    #   interval: 30s
+    #   timeout: 10s
+    #   retries: 5
     networks:
       - default
 
@@ -124,6 +126,45 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8081:8081"
+      # - "50052:50052"
+    environment:
+      - ENV_FILE=.env
+    depends_on:
+      - redis
+      - postgres
+      - mysql
+      - datadog
+      - log-service
+    networks:
+      - default
+  
+  task-service:
+    container_name: task-service
+    build:
+      context: ./task-service
+      dockerfile: Dockerfile
+    ports:
+      - "8082:8082"
+    environment:
+      - ENV_FILE=.env
+    depends_on:
+      - redis
+      - rabbitmq
+      - postgres
+      - mysql
+      - datadog
+      - user-service
+      - log-service
+    networks:
+      - default
+  
+  log-service:
+    container_name: log-service
+    build:
+      context: ./log-service
+      dockerfile: Dockerfile
+    ports:
+      - "8083:8083"
     environment:
       - ENV_FILE=.env
     depends_on:
@@ -134,13 +175,14 @@ services:
       - mongodb
     networks:
       - default
-  
-  task-service:
-    container_name: task-service
+
+  notification-service:
+    container_name: notification-service
     build:
-      context: ./task-service
+      context: ./notification-service
+      dockerfile: Dockerfile
     ports:
-      - "8082:8082"
+      - "8084:8084"
     environment:
       - ENV_FILE=.env
     depends_on:
@@ -149,6 +191,7 @@ services:
       - postgres
       - mysql
       - mongodb
+      - task-service
     networks:
       - default
 
@@ -165,54 +208,10 @@ services:
     networks:
       - default
 
-
-  # log-service:
-  #   container_name: log-service
-  #   build:
-  #     context: ./log-service
-  #   ports:
-  #     - "8085:8085"
-  #   environment:
-  #     - ENV_FILE=.env
-  #   depends_on:
-  #     - redis
-  #     - rabbitmq
-  #     - postgres
-  #     - mysql
-  #     - mongodb
-  #   # depends_on:
-  #   #   redis:
-  #   #     condition: service_healthy
-  #   #   rabbitmq:
-  #   #     condition: service_healthy
-  #   #   postgres:
-  #   #     condition: service_healthy
-  #   #   mysql:
-  #   #     condition: service_healthy
-  #     # mongodb: {}
-  #   networks:
-  #     - default
-
-  # notification-service:
-  #   container_name: notification-service
-  #   build:
-  #     context: ./notification-service
-  #   ports:
-  #     - "8086:8086"
-  #   environment:
-  #     - ENV_FILE=.env
-  #   depends_on:
-  #     - redis
-  #     - rabbitmq
-  #     - postgres
-  #     - mysql
-  #     - mongodb
-  #   networks:
-  #     - default
-
 networks:
   default:
     driver: bridge
 
 volumes:
   mongo_data:
+  postgres_data:

@@ -5,7 +5,7 @@ FROM golang:1.22.0 AS builder
 WORKDIR /app
 
 COPY go.mod go.sum ./
-RUN go mod download
+RUN go mod tidy
 COPY ./ ./
 RUN go build -o log-service .
 FROM gcr.io/distroless/base

@@ -1,11 +1,11 @@
 # Use the official Golang image as a build stage
-FROM golang:1.22.0 AS builder
+FROM golang:1.23.0 AS builder
 
 # Set the Current Working Directory inside the container
 WORKDIR /app
 
 COPY go.mod go.sum ./
-RUN go mod download
+RUN go mod tidy
 COPY ./ ./
 RUN go build -o notification-service .
 FROM gcr.io/distroless/base

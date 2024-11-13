@@ -25,6 +25,7 @@ This project utilizes several modern technologies and follows a clean architectu
 | **Microservices**      | Independent services (User, Task, Log, Notification)  | ✅     |
 | **Clean Architecture** | Layered design for maintainability                    | ✅     |
 | **JWT Token Auth**     | Authentication and Authorization                      | ✅     |
+| **Nginx**              | API gateway of microservices                          | ✅     |
 | **SMTP**               | Share notification info to user                       | ✅     |
 | **Redis**              | Caching layer for improving performance               | ✅     |
 | **RabbitMQ**           | Message queue for asynchronous communication          | ✅     |

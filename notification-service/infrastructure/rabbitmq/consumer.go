@@ -35,9 +35,10 @@ func Init(params RabbitMqParam) (*RabbitMq, error) {
 	output := &RabbitMq{}
 	username := os.Getenv("RABBITMQ_USERNAME")
 	password := os.Getenv("RABBITMQ_PASSWORD")
+	host := os.Getenv("RABBITMQ_HOST")
 	port := os.Getenv("RABBITMQ_PORT")
 
-	output.url = fmt.Sprintf("amqp://%s:%s@localhost:%s/", username, password, port)
+	output.url = fmt.Sprintf("amqp://%s:%s@%s:%s/", username, password, host, port)
 	output.email = params.Email
 	output.grpc = params.GRPC
 

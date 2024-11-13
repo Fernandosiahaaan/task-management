@@ -20,17 +20,19 @@ type GrpcComm struct {
 
 func NewGrpc(param ParamGrpc) (*GrpcComm, error) {
 	grpcCtx, grpcCancel := context.WithCancel(param.Ctx)
+
+	hostUserGRPC := os.Getenv("GRPC_USER_HOST")
+	if hostUserGRPC == "" {
+		hostUserGRPC = "localhost"
+	}
 	portUserGRPC := os.Getenv("GRPC_USER_PORT")
 	if portUserGRPC == "" {
 		portUserGRPC = "50052"
 	}
-	portLogGRPC := os.Getenv("GRPC_LOG_PORT")
-	if portLogGRPC == "" {
-		portLogGRPC = "50052"
-	}
 
 	userServer, err := usergrpc.ConnectToServerGrpc(usergrpc.ParamClientGrpc{
 		Ctx:  grpcCtx,
+		Host: hostUserGRPC,
 		Port: portUserGRPC,
 	})
 	if err != nil {
