@@ -12,7 +12,7 @@ func Init() {
 	tracer.Start(
 		tracer.WithDebugMode(false),
 		tracer.WithAgentAddr(host),
-		tracer.WithServiceName("my-task-service"),
+		tracer.WithServiceName("my-user-service"),
 	)
 }
 

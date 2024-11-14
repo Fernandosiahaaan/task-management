@@ -109,15 +109,18 @@ services:
     networks:
       - default
   
-  datadog:
-    image: datadog/agent:latest
-    container_name: datadog-agent
-    environment:
-      - DD_API_KEY=816dfd57aaffc64018ab5034e6e51192
-    ports:
-      - "8126:8126"  # contoh expose port lain jika perlu
-    networks:
-      - default
+  # datadog:
+  #   image: datadog/agent:latest
+  #   container_name: datadog-agent
+  #   environment:
+  #     - DD_API_KEY="816dfd57aaffc64018ab5034e6e51192"
+  #     - DD_SITE="us5.datadoghq.com"
+  #   volumes:
+  #     - /var/run/docker.sock:/var/run/docker.sock:ro
+  #   ports:
+  #     - "8126:8126"  
+  #   networks:
+  #     - default
 
   user-service:
     container_name: user-service
@@ -133,7 +136,6 @@ services:
       - redis
       - postgres
       - mysql
-      - datadog
       - log-service
     networks:
       - default
@@ -152,7 +154,6 @@ services:
       - rabbitmq
       - postgres
       - mysql
-      - datadog
       - user-service
       - log-service
     networks:
